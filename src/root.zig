@@ -1,5 +1,6 @@
-//! By convention, root.zig is the root source file when making a library.
+//! Simplex noise and fbm implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
 const std = @import("std");
+pub const PatternType = @import("types").PatternType;
 
 const Vec2 = struct {
     x: f32,
@@ -31,6 +32,7 @@ inline fn fract(x: f32) f32 {
 fn dot2(p: Vec2, q: Vec2) f32 {
     return p.x * q.x + p.y * q.y;
 }
+
 fn dot3(p: Vec3, q: Vec3) f32 {
     return p.x * q.x + p.y * q.y + p.z * q.z;
 }
@@ -70,7 +72,9 @@ fn noise(p: Vec2) f32 {
 const numOctaves = 6;
 
 // fbm noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
-fn fbm(vec: Vec2, H: f32) f32 {
+fn fbm(vec: Vec2) f32 {
+    // H (Hurst exponent) determines the self similarity it recommand to use 0.5
+    const H = 0.5;
     const G = std.math.exp2(-H);
     var f: f32 = 1.0;
     var a: f32 = 1.0;
@@ -83,17 +87,58 @@ fn fbm(vec: Vec2, H: f32) f32 {
     return t;
 }
 
-pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !std.ArrayList(u8) {
+fn pattern1(p: Vec2) f32 {
+    return fbm(p);
+}
+
+fn pattern2(p: Vec2) f32 {
+    const q: Vec2 = .{
+        .x = fbm(.{ .x = p.x + 0, .y = p.y + 0 }),
+        .y = fbm(.{ .x = p.x + 5.2, .y = p.y + 1.3 }),
+    };
+
+    return fbm(.{
+        .x = p.x + 4.0 * q.x,
+        .y = p.y + 4.0 * q.y,
+    });
+}
+
+fn pattern3(p: Vec2) f32 {
+    const q: Vec2 = .{
+        .x = fbm(.{ .x = p.x + 0, .y = p.y + 0 }),
+        .y = fbm(.{ .x = p.x + 5.2, .y = p.y + 1.3 }),
+    };
+
+    const r: Vec2 = .{
+        .x = fbm(.{ .x = p.x + 4.0 * q.x + 1.7, .y = p.y + 4.0 * q.y + 9.2 }),
+        .y = fbm(.{ .x = p.x + 4.0 * q.x + 8.3, .y = p.y + 4.0 * q.y + 2.8 }),
+    };
+
+    return fbm(.{
+        .x = p.x + 4.0 * r.x,
+        .y = p.y + 4.0 * r.y,
+    });
+}
+
+pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pattern: PatternType) !std.ArrayList(u8) {
     var data = try std.ArrayList(u8).initCapacity(allocator, width * height);
     data.appendNTimesAssumeCapacity(0, width * height);
 
-    const scale = 100.0;
+    const scale: f32 = switch (pattern) {
+        PatternType.k1 => 100.0,
+        PatternType.k2 => 1000.0,
+        PatternType.k3 => 8000.0,
+    };
     for (0..height) |i| {
         for (0..width) |j| {
             const x = @as(f32, @floatFromInt(j)) / @as(f32, (scale));
             const y = @as(f32, @floatFromInt(i)) / @as(f32, (scale));
-            const value = fbm(.{ .x = x, .y = y }, 0.7);
-            // std.debug.print("fbm value {}\n", .{value});
+
+            const value = switch (pattern) {
+                PatternType.k1 => pattern1(.{ .x = x, .y = y }),
+                PatternType.k2 => pattern2(.{ .x = x, .y = y }),
+                PatternType.k3 => pattern3(.{ .x = x, .y = y }),
+            };
             data.items[i * width + j] = @as(u8, @intFromFloat(std.math.clamp((value + 1) / 2 * 255, 0, 255)));
         }
     }

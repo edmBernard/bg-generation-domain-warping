@@ -1,9 +1,11 @@
 const std = @import("std");
+const PatternType = @import("types").PatternType;
 
 pub const Params = struct {
     filename: []const u8,
     width: u32,
     height: u32,
+    pattern_type: PatternType,
 };
 
 const ErrorCli = error{
@@ -44,10 +46,21 @@ pub fn parse_args(allocator: std.mem.Allocator) !Params {
         std.log.err("Invalid height", .{});
         return ErrorCli.WrongArgument;
     }
+    const pattern_str = args.next();
+    if (pattern_str == null) {
+        std.log.err("Missing pattern type", .{});
+        return ErrorCli.WrongArgument;
+    }
+
+    const pattern_type = std.meta.stringToEnum(PatternType, pattern_str.?) orelse {
+        std.log.err("Invalid type {s}", .{pattern_str.?});
+        return ErrorCli.WrongArgument;
+    };
 
     return Params{
         .filename = filename.?,
         .width = width,
         .height = height,
+        .pattern_type = pattern_type,
     };
 }
