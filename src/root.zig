@@ -258,33 +258,38 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     col = lerp3(
                         col,
                         Vec3.fromHexWithAlpha(0x021b29ff), // #021b29ff
-                        0.5 * smoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
+                        0.5 * supersmoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
                     );
 
+                    // Add a lighting
                     const e = 1.0 / scale;
-
                     const fex, _, _ = pattern3(.{ .x = x + e, .y = y });
                     const fey, _, _ = pattern3(.{ .x = x, .y = y + e });
 
-                    // nor.x is the derivative of pattern3 along x
-                    // nor.y is the derivative of pattern3 along y
-                    // nor.z is the step
-                    const nor = normalize3(.{ .x = fex - f, .y = fey - f, .z = e });
+                    // compute surface normal
+                    // normal.x is the derivative of pattern3 along x
+                    // normal.y is the derivative of pattern3 along y
+                    // normal.z is the step
+                    const normal = normalize3(.{ .x = fex - f, .y = fey - f, .z = e });
 
-                    const lig = normalize3(.{ .x = 0.9, .y = -0.2, .z = -0.4 });
-                    const diff = std.math.clamp(0.3 + 0.7 * dot3(nor, lig), 0.0, 1.0);
-                    // std.debug.print("diff: {d}\n", .{diff});
+                    // we define a light direction
+                    const lig = normalize3(.{ .x = 0.5, .y = -0.3, .z = -0.1 });
+                    // we compute the diffuse term
+                    const diff = std.math.clamp(0.5 + 0.9 * dot3(normal, lig), 0.0, 1.0);
                     const lin: Vec3 = .{
-                        .x = 0.85 * (nor.y * 0.5 + 0.5) + 0.15 * diff,
-                        .y = 0.90 * (nor.y * 0.5 + 0.5) + 0.10 * diff,
-                        .z = 0.95 * (nor.y * 0.5 + 0.5) + 0.05 * diff,
+                        .x = (normal.z * 0.3 + 0.7) + 0.15 * diff,
+                        .y = (normal.z * 0.3 + 0.7) + 0.15 * diff,
+                        .z = (normal.z * 0.3 + 0.7) + 0.15 * diff,
                     };
                     col = .{ .x = col.x * lin.x, .y = col.y * lin.y, .z = col.z * lin.z };
 
+                    // increase contrast on high frequency details
                     col = mul3(col, f * 2.0);
+
+                    // inverse value and apply a gamma curve to boost contrast
                     const functor = struct {
                         pub fn call(value: f32) f32 {
-                            return std.math.pow(f32, 1 - value, 2);
+                            return std.math.pow(f32, 1 - value, 3.0);
                         }
                     }.call;
                     col = forEach3(col, functor);
