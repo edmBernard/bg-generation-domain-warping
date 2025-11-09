@@ -251,13 +251,13 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     // _ = f;
                     // _ = r;
                     // _ = q;
-                    col = lerp3(col, Vec3.fromHexWithAlpha(0x490101ff), f); // #490101ff
+                    col = lerp3(col, Vec3.fromHexWithAlpha(0xe2730cff), f); // #e2730cff
                     col = lerp3(col, Vec3.fromHexWithAlpha(0xffffffff), dot2(r, r)); // #ffffffff
                     col = lerp3(col, Vec3.fromHexWithAlpha(0x832121ff), dot2(q, q)); // #832121ff
                     // col = lerp3(col, Vec3.fromHexWithAlpha(0x0adaffff), 0.5 * q.y * q.y); // #0adaffff
                     col = lerp3(
                         col,
-                        Vec3.fromHexWithAlpha(0x021b29ff), // #021b29ff
+                        Vec3.fromHexWithAlpha(0x290202ff), // #290202ff
                         0.5 * supersmoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
                     );
 
@@ -278,7 +278,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     const diff = std.math.clamp(0.5 + 0.9 * dot3(normal, lig), 0.0, 1.0);
                     const lin: Vec3 = .{
                         .x = (normal.z * 0.3 + 0.7) + 0.15 * diff,
-                        .y = (normal.z * 0.3 + 0.7) + 0.15 * diff,
+                        .y = (normal.z * 0.3 + 0.7) + 0.2 * diff,
                         .z = (normal.z * 0.3 + 0.7) + 0.15 * diff,
                     };
                     col = .{ .x = col.x * lin.x, .y = col.y * lin.y, .z = col.z * lin.z };
@@ -289,7 +289,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     // inverse value and apply a gamma curve to boost contrast
                     const functor = struct {
                         pub fn call(value: f32) f32 {
-                            return std.math.pow(f32, 1 - value, 3.0);
+                            return std.math.pow(f32, 1 - value, 4.0);
                         }
                     }.call;
                     col = forEach3(col, functor);
