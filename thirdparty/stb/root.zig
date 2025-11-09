@@ -13,7 +13,7 @@ pub fn image_write(
     width: u32,
     height: u32,
 ) !void {
-    const number_component = 1;
+    const number_component = 3; // RGB
     const quality = 95;
 
     const result = stb_image_write.stbi_write_jpg(
