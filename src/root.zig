@@ -267,13 +267,13 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     const fey, _, _ = pattern3(.{ .x = x, .y = y + e });
 
                     // nor.x is the derivative of pattern3 along x
-                    // nor.y is the step
-                    // nor.z is the derivative of pattern3 along y
-                    const nor = normalize3(.{ .x = fex - f, .y = e, .z = fey - f });
+                    // nor.y is the derivative of pattern3 along y
+                    // nor.z is the step
+                    const nor = normalize3(.{ .x = fex - f, .y = fey - f, .z = e });
 
                     const lig = normalize3(.{ .x = 0.9, .y = -0.2, .z = -0.4 });
                     const diff = std.math.clamp(0.3 + 0.7 * dot3(nor, lig), 0.0, 1.0);
-
+                    // std.debug.print("diff: {d}\n", .{diff});
                     const lin: Vec3 = .{
                         .x = 0.85 * (nor.y * 0.5 + 0.5) + 0.15 * diff,
                         .y = 0.90 * (nor.y * 0.5 + 0.5) + 0.10 * diff,
