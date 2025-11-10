@@ -4,6 +4,8 @@ Command line that generate "beautiful" image based on noise generation. The idea
 
 - Github : [https://github.com/edmBernard/bg-generation-domain-warping](https://github.com/edmBernard/bg-generation-domain-warping)
 
+![Example of image generated this project](asset/banner_postprocessed.jpg)
+
 ## Generated command
 
 - `bg-generation`
@@ -19,7 +21,7 @@ We use :
 
 ```bash
 zig build
-zig run generation
+zig build --release=fast run -- <filename_without_ext> <width> <height>
 ```
 
 ## Disclaimer

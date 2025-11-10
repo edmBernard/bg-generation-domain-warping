@@ -87,6 +87,8 @@ fn pattern(p: laz.Vec2) struct { laz.InnerType, laz.Vec2, laz.Vec2 } {
     return .{ f, r, q };
 }
 
+/// Generate an image of given width and height using domain warping and fbm noise
+/// The code is a bit long and hard to read mainly because it use simd operations to speed up processing
 pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !std.ArrayList(u8) {
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
@@ -163,6 +165,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
             const r_u8 = @as(@Vector(laz.vec_len, u8), @intFromFloat(std.math.clamp(col.x * laz.toV(255), laz.toV(0), laz.toV(255))));
             const g_u8 = @as(@Vector(laz.vec_len, u8), @intFromFloat(std.math.clamp(col.y * laz.toV(255), laz.toV(0), laz.toV(255))));
             const b_u8 = @as(@Vector(laz.vec_len, u8), @intFromFloat(std.math.clamp(col.z * laz.toV(255), laz.toV(0), laz.toV(255))));
+            // stb expect data to be in interlaced RGBRGBRGB.. format
             data.items[i * width * 3 + j * 3 * laz.vec_len ..][0 .. laz.vec_len * 3].* = std.simd.interlace(.{ r_u8, g_u8, b_u8 });
         }
     }
