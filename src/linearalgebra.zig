@@ -1,23 +1,30 @@
 const std = @import("std");
 
+pub const vec_len = std.simd.suggestVectorLength(u8) orelse @panic("No SIMD?");
+pub const InnerType: type = @Vector(vec_len, f32);
+
+pub inline fn f32_v(scalar: f32) InnerType {
+    return @splat(scalar);
+}
+
 // MARK: Helper 1D functions
-pub inline fn fract(x: f32) f32 {
+pub inline fn fract(x: InnerType) InnerType {
     return x - @abs(std.math.floor(x)) * std.math.sign(x);
 }
 
 // MARK: Vec2
 pub const Vec2 = struct {
-    x: f32,
-    y: f32,
+    x: InnerType,
+    y: InnerType,
 
-    pub inline fn mul1(a: Vec2, b: f32) Vec2 {
+    pub inline fn mul1(a: Vec2, b: InnerType) Vec2 {
         return .{
             .x = a.x * b,
             .y = a.y * b,
         };
     }
 
-    pub inline fn add1(a: Vec2, b: f32) Vec2 {
+    pub inline fn add1(a: Vec2, b: InnerType) Vec2 {
         return .{
             .x = a.x + b,
             .y = a.y + b,
@@ -31,22 +38,22 @@ pub const Vec2 = struct {
         };
     }
 
-    pub inline fn dot(p: Vec2, q: Vec2) f32 {
+    pub inline fn dot(p: Vec2, q: Vec2) InnerType {
         return p.x * q.x + p.y * q.y;
     }
 };
 
 // MARK: Vec3
 pub const Vec3 = struct {
-    x: f32,
-    y: f32,
-    z: f32,
+    x: InnerType,
+    y: InnerType,
+    z: InnerType,
 
     pub inline fn ones() Vec3 {
-        return .{ .x = 1.0, .y = 1.0, .z = 1.0 };
+        return .{ .x = f32_v(1.0), .y = f32_v(1.0), .z = f32_v(1.0) };
     }
 
-    pub inline fn mul1(a: Vec3, b: f32) Vec3 {
+    pub inline fn mul1(a: Vec3, b: InnerType) Vec3 {
         return .{
             .x = a.x * b,
             .y = a.y * b,
@@ -62,7 +69,7 @@ pub const Vec3 = struct {
         };
     }
 
-    pub inline fn add1(a: Vec3, b: f32) Vec3 {
+    pub inline fn add1(a: Vec3, b: InnerType) Vec3 {
         return .{
             .x = a.x + b,
             .y = a.y + b,
@@ -78,12 +85,12 @@ pub const Vec3 = struct {
         };
     }
 
-    pub inline fn dot(p: Vec3, q: Vec3) f32 {
+    pub inline fn dot(p: Vec3, q: Vec3) InnerType {
         return p.x * q.x + p.y * q.y + p.z * q.z;
     }
 
     pub inline fn normalize(v: Vec3) Vec3 {
-        const len = std.math.sqrt(Vec3.dot(v, v));
+        const len = @sqrt(Vec3.dot(v, v));
         return .{
             .x = v.x / len,
             .y = v.y / len,
@@ -91,7 +98,7 @@ pub const Vec3 = struct {
         };
     }
 
-    pub inline fn lerp(a: Vec3, b: Vec3, t: f32) Vec3 {
+    pub inline fn lerp(a: Vec3, b: Vec3, t: InnerType) Vec3 {
         return .{
             .x = std.math.lerp(a.x, b.x, t),
             .y = std.math.lerp(a.y, b.y, t),
@@ -99,17 +106,17 @@ pub const Vec3 = struct {
         };
     }
 
-    pub inline fn pow(a: Vec3, b: f32) Vec3 {
+    pub inline fn pow(a: Vec3, comptime b: InnerType) Vec3 {
         return .{
-            .x = std.math.pow(f32, a.x, b),
-            .y = std.math.pow(f32, a.y, b),
-            .z = std.math.pow(f32, a.z, b),
+            .x = std.math.pow(InnerType, a.x, b),
+            .y = std.math.pow(InnerType, a.y, b),
+            .z = std.math.pow(InnerType, a.z, b),
         };
     }
 
     // This method is not really usable
     // because lambda function in zig are not easy to declare
-    pub inline fn forEach(a: Vec3, fnc: fn (f32) f32) Vec3 {
+    pub inline fn forEach(a: Vec3, fnc: fn (InnerType) InnerType) Vec3 {
         return .{
             .x = fnc(a.x),
             .y = fnc(a.y),
@@ -120,7 +127,7 @@ pub const Vec3 = struct {
 
 // MARK: Matrix2x2
 pub const Mat2x2 = struct {
-    data: [4]f32,
+    data: [4]InnerType,
     pub inline fn mulvec2(m: Mat2x2, b: Vec2) Vec2 {
         return .{
             .x = m.data[0] * b.x + m.data[1] * b.y,
