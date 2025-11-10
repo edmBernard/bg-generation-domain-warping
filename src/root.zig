@@ -2,11 +2,9 @@
 const std = @import("std");
 const laz = @import("linearalgebra.zig");
 const simplex = @import("simplex.zig");
-pub const PatternType = @import("types").PatternType;
 
-const time = 125.0;
-
-pub fn vec3fromHexWithAlpha(hex: u32) laz.Vec3 {
+/// The hex color is in format 0xRRGGBBAA
+inline fn hexToVec3(comptime hex: u32) laz.Vec3 {
     return .{
         .x = @as(f32, @floatFromInt((hex & 0xFF000000) >> 24)) / 255.0,
         .y = @as(f32, @floatFromInt((hex & 0x00FF0000) >> 16)) / 255.0,
@@ -96,75 +94,60 @@ fn pattern3(p: laz.Vec2) struct { f32, laz.Vec2, laz.Vec2 } {
     return .{ f, r, q };
 }
 
-pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pattern: PatternType) !std.ArrayList(u8) {
+pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !std.ArrayList(u8) {
     var data = try std.ArrayList(u8).initCapacity(allocator, width * height * 3);
     data.appendNTimesAssumeCapacity(0, width * height * 3);
 
-    const scale: f32 = switch (pattern) {
-        PatternType.k1 => 100.0,
-        PatternType.k2 => 1000.0,
-        PatternType.k3 => 1000.0,
-    };
+    const scale = 1000.0;
+    const time = 125.0;
+    const sin_time = std.math.sin(time);
+
     for (0..height) |i| {
         for (0..width) |j| {
-            const x = @as(f32, @floatFromInt(j)) / @as(f32, (scale)) + std.math.sin(time);
-            const y = @as(f32, @floatFromInt(i)) / @as(f32, (scale)) + std.math.sin(time);
+            const x = @as(f32, @floatFromInt(j)) / scale + sin_time;
+            const y = @as(f32, @floatFromInt(i)) / scale + sin_time;
 
-            const r, const g, const b = switch (pattern) {
-                PatternType.k1 => blk: {
-                    const f = pattern1(.{ .x = x, .y = y });
-                    break :blk .{ f, f, f };
-                },
-                PatternType.k2 => blk: {
-                    const f, const q = pattern2(.{ .x = x, .y = y });
-                    var col = vec3fromHexWithAlpha(0xd88314ff); // #d88314ff
-                    col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x4c402fff), f); // #4c402fff
-                    col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x760404ff), laz.Vec2.dot(q, q)); // #760404ff
-                    col = col.pow(2.0);
-                    break :blk .{ col.x, col.y, col.z };
-                },
-                PatternType.k3 => blk: {
-                    const f, const r, const q = pattern3(.{ .x = x, .y = y });
-                    var col = vec3fromHexWithAlpha(0x561111ff); // #561111ff
+            const r, const g, const b = blk: {
+                const f, const r, const q = pattern3(.{ .x = x, .y = y });
+                var col = hexToVec3(0x561111ff); // #561111ff
 
-                    col = col.lerp(vec3fromHexWithAlpha(0xe2730cff), f); // #e2730cff
-                    col = col.lerp(vec3fromHexWithAlpha(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
-                    col = col.lerp(vec3fromHexWithAlpha(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
-                    // col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x0adaffff), 0.5 * q.y * q.y); // #0adaffff
-                    col = col.lerp(
-                        vec3fromHexWithAlpha(0x290202ff), // #290202ff
-                        0.5 * supersmoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
-                    );
+                col = col.lerp(hexToVec3(0xe2730cff), f); // #e2730cff
+                col = col.lerp(hexToVec3(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
+                col = col.lerp(hexToVec3(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
+                // col = laz.Vec3.lerp(col, hexToVec3(0x0adaffff), 0.5 * q.y * q.y); // #0adaffff
+                col = col.lerp(
+                    hexToVec3(0x290202ff), // #290202ff
+                    0.5 * supersmoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
+                );
 
-                    // Add a lighting
-                    const e = 1.0 / scale;
-                    const fex, _, _ = pattern3(.{ .x = x + e, .y = y });
-                    const fey, _, _ = pattern3(.{ .x = x, .y = y + e });
+                // Add a lighting
+                const e = 1.0 / scale;
+                const fex, _, _ = pattern3(.{ .x = x + e, .y = y });
+                const fey, _, _ = pattern3(.{ .x = x, .y = y + e });
 
-                    // compute surface normal
-                    // normal.x is the derivative of pattern3 along x
-                    // normal.y is the derivative of pattern3 along y
-                    // normal.z is the step
-                    const normal = laz.Vec3.normalize(.{ .x = fex - f, .y = fey - f, .z = e });
+                // compute surface normal
+                // normal.x is the derivative of pattern3 along x
+                // normal.y is the derivative of pattern3 along y
+                // normal.z is the step
+                const normal = laz.Vec3.normalize(.{ .x = fex - f, .y = fey - f, .z = e });
 
-                    // we define a light direction
-                    const light = laz.Vec3.normalize(.{ .x = 0.5, .y = -0.3, .z = -0.1 });
-                    // we compute the diffuse term
-                    const diff = std.math.clamp(0.5 + 0.9 * laz.Vec3.dot(normal, light), 0.0, 1.0);
-                    const lin: laz.Vec3 = .{
-                        .x = (normal.z * 0.2 + 0.7) + 0.1 * diff,
-                        .y = (normal.z * 0.2 + 0.7) + 0.1 * diff,
-                        .z = (normal.z * 0.2 + 0.7) + 0.1 * diff,
-                    };
-                    col = col.mul(lin);
+                // we define a light direction
+                const light = laz.Vec3.normalize(.{ .x = 0.5, .y = -0.3, .z = -0.1 });
+                // we compute the diffuse term
+                const diff = std.math.clamp(0.5 + 0.9 * laz.Vec3.dot(normal, light), 0.0, 1.0);
+                const lin: laz.Vec3 = .{
+                    .x = (normal.z * 0.2 + 0.7) + 0.1 * diff,
+                    .y = (normal.z * 0.2 + 0.7) + 0.1 * diff,
+                    .z = (normal.z * 0.2 + 0.7) + 0.1 * diff,
+                };
+                col = col.mul(lin);
 
-                    // increase contrast on high frequency details
-                    col = col.mul1(f * 2.0);
+                // increase contrast on high frequency details
+                col = col.mul1(f * 2.0);
 
-                    // inverse value and apply a gamma curve to boost contrast
-                    col = laz.Vec3.ones().add(col.mul1(-1.0)).pow(3.0);
-                    break :blk .{ col.x, col.y, col.z };
-                },
+                // inverse value and apply a gamma curve to boost contrast
+                col = laz.Vec3.ones().add(col.mul1(-1.0)).pow(3.0);
+                break :blk .{ col.x, col.y, col.z };
             };
             data.items[i * width * 3 + j * 3 + 0] = @as(u8, @intFromFloat(std.math.clamp(r * 255, 0, 255)));
             data.items[i * width * 3 + j * 3 + 1] = @as(u8, @intFromFloat(std.math.clamp(g * 255, 0, 255)));

@@ -13,7 +13,7 @@ pub fn main() !void {
 
     // generate image
     const tic = std.time.microTimestamp();
-    var data = try bg_generation.generate_image(allocator, args.width, args.height, args.pattern_type);
+    var data = try bg_generation.generate_image(allocator, args.width, args.height);
     defer data.deinit(allocator);
     const tac: i64 = std.time.microTimestamp() - tic;
     std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(tac)) / 1_000_000});
@@ -21,7 +21,7 @@ pub fn main() !void {
     // save to file
     var all_together_slice: [256]u8 = undefined;
     // filename need to be zero terminated for stb_image_write
-    const filename = try std.fmt.bufPrintZ(&all_together_slice, "{s}_{s}.jpeg", .{ args.filename, @tagName(args.pattern_type) });
+    const filename = try std.fmt.bufPrintZ(&all_together_slice, "{s}.jpeg", .{args.filename});
     std.debug.print("Writing image to file: {s}\n", .{filename});
     try stb_wrapper.image_write(filename, data.items, args.width, args.height);
 

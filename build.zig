@@ -23,11 +23,6 @@ pub fn build(b: *std.Build) void {
 
     const stb_wrapper = @import("thirdparty/stb/build.zig").build(b);
 
-    const mod_types = b.addModule("types", .{
-        .root_source_file = b.path("src/types.zig"),
-        .target = target,
-    });
-
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -48,9 +43,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         // List of modules available for import in source files part of the
         // root module.
-        .imports = &.{
-            .{ .name = "types", .module = mod_types },
-        },
+        .imports = &.{},
     });
 
     // Here we define an executable. An executable needs to have a root module
@@ -90,7 +83,6 @@ pub fn build(b: *std.Build) void {
                 // repeated because you are allowed to rename your imports, which
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
-                .{ .name = "types", .module = mod_types },
                 .{ .name = "bg_generation", .module = mod },
                 .{ .name = "stb_wrapper", .module = stb_wrapper },
             },
