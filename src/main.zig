@@ -12,8 +12,11 @@ pub fn main() !void {
     const args = try cli.parse_args(allocator);
 
     // generate image
+    const tic = std.time.microTimestamp();
     var data = try bg_generation.generate_image(allocator, args.width, args.height, args.pattern_type);
     defer data.deinit(allocator);
+    const tac: i64 = std.time.microTimestamp() - tic;
+    std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(tac)) / 1_000_000});
 
     // save to file
     var all_together_slice: [256]u8 = undefined;
