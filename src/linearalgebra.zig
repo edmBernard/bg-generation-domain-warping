@@ -3,13 +3,14 @@ const std = @import("std");
 pub const vec_len = std.simd.suggestVectorLength(u8) orelse @panic("No SIMD?");
 pub const InnerType: type = @Vector(vec_len, f32);
 
-pub inline fn f32_v(scalar: f32) InnerType {
+/// Convert a scalar to a vector by splatting it
+pub inline fn toV(scalar: f32) InnerType {
     return @splat(scalar);
 }
 
 // MARK: Helper 1D functions
 pub inline fn fract(x: InnerType) InnerType {
-    return x - @abs(std.math.floor(x)) * std.math.sign(x);
+    return x - @floor(x);
 }
 
 // MARK: Vec2
@@ -50,7 +51,7 @@ pub const Vec3 = struct {
     z: InnerType,
 
     pub inline fn ones() Vec3 {
-        return .{ .x = f32_v(1.0), .y = f32_v(1.0), .z = f32_v(1.0) };
+        return .{ .x = toV(1.0), .y = toV(1.0), .z = toV(1.0) };
     }
 
     pub inline fn mul1(a: Vec3, b: InnerType) Vec3 {
@@ -139,43 +140,43 @@ pub const Mat2x2 = struct {
 // MARK: Tests
 
 test "Vec2 Mul1 Static Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = Vec2.mul1(v, 4.0);
-    try std.testing.expect(r.x == 8.0);
-    try std.testing.expect(r.y == 12.0);
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = Vec2.mul1(v, toV(4.0));
+    try std.testing.expect(std.meta.eql(r.x, toV(8.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(12.0)));
 }
 
 test "Vec2 Mul1 Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = v.mul1(4.0);
-    try std.testing.expect(r.x == 8.0);
-    try std.testing.expect(r.y == 12.0);
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = v.mul1(toV(4.0));
+    try std.testing.expect(std.meta.eql(r.x, toV(8.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(12.0)));
 }
 
 test "Vec2 Add1 Static Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = Vec2.add1(v, 4.0);
-    try std.testing.expect(r.x == 6.0);
-    try std.testing.expect(r.y == 7.0);
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = Vec2.add1(v, toV(4.0));
+    try std.testing.expect(std.meta.eql(r.x, toV(6.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(7.0)));
 }
 
 test "Vec2 Add1 Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = v.add1(4.0);
-    try std.testing.expect(r.x == 6.0);
-    try std.testing.expect(r.y == 7.0);
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = v.add1(toV(4.0));
+    try std.testing.expect(std.meta.eql(r.x, toV(6.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(7.0)));
 }
 
-test "Vec2 Add2 Static Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = Vec2.add(v, Vec2{ .x = 4.0, .y = 5.0 });
-    try std.testing.expect(r.x == 6.0);
-    try std.testing.expect(r.y == 8.0);
+test "Vec2 Add Static Method" {
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = Vec2.add(v, Vec2{ .x = toV(4.0), .y = toV(5.0) });
+    try std.testing.expect(std.meta.eql(r.x, toV(6.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(8.0)));
 }
 
-test "Vec2 Add2 Method" {
-    const v = Vec2{ .x = 2.0, .y = 3.0 };
-    const r = v.add(Vec2{ .x = 4.0, .y = 5.0 });
-    try std.testing.expect(r.x == 6.0);
-    try std.testing.expect(r.y == 8.0);
+test "Vec2 Add Method" {
+    const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
+    const r = v.add(Vec2{ .x = toV(4.0), .y = toV(5.0) });
+    try std.testing.expect(std.meta.eql(r.x, toV(6.0)));
+    try std.testing.expect(std.meta.eql(r.y, toV(8.0)));
 }
