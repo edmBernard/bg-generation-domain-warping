@@ -25,17 +25,9 @@ inline fn supersmoothstep(edge0: f32, edge1: f32, x: f32) f32 {
     return t * t * t * (10 - 15 * t + 6 * t * t);
 }
 
-inline fn forEach3(a: laz.Vec3, fnc: fn (f32) f32) laz.Vec3 {
-    return .{
-        .x = fnc(a.x),
-        .y = fnc(a.y),
-        .z = fnc(a.z),
-    };
-}
-
 // rotation matrix to avoid direction artifacts
 const angle = std.math.pi / 4.0;
-const mtx = [4]f32{ @cos(angle), @sin(angle), -@sin(angle), @cos(angle) };
+const mtx = laz.Mat2x2{ .data = [4]f32{ @cos(angle), @sin(angle), -@sin(angle), @cos(angle) } };
 
 // fbm noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
 fn fbm(comptime octaves: i32, vec: laz.Vec2) f32 {
@@ -46,7 +38,7 @@ fn fbm(comptime octaves: i32, vec: laz.Vec2) f32 {
     var a: f32 = 0.5;
     var t: f32 = 0.0;
     for (0..octaves) |_| {
-        t += a * simplex.noise(laz.Vec2.mul1(laz.matmul(mtx, vec), f));
+        t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
         f *= 1.9;
         a *= G;
     }
@@ -63,7 +55,7 @@ fn fbm6(vec: laz.Vec2) f32 {
     var a: f32 = 0.5;
     var t: f32 = 0.0;
     for (0..6) |_| {
-        t += a * simplex.noise(laz.Vec2.mul1(laz.matmul(mtx, vec), f));
+        t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
         f *= 2.1;
         a *= G;
     }
@@ -100,10 +92,7 @@ fn pattern3(p: laz.Vec2) struct { f32, laz.Vec2, laz.Vec2 } {
     };
 
     // high frequency
-    const f: f32 = 0.5 + 0.5 * fbm(4, .{
-        .x = p.x + 2.1 * r.x,
-        .y = p.y + 2.1 * r.y,
-    });
+    const f: f32 = 0.5 + 0.5 * fbm(4, p.add(r.mul1(2.1)));
     return .{ f, r, q };
 }
 
@@ -131,27 +120,18 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     var col = vec3fromHexWithAlpha(0xd88314ff); // #d88314ff
                     col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x4c402fff), f); // #4c402fff
                     col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x760404ff), laz.Vec2.dot(q, q)); // #760404ff
-                    const functor = struct {
-                        pub fn call(value: f32) f32 {
-                            return value * value;
-                        }
-                    }.call;
-                    col = forEach3(col, functor);
+                    col = col.pow(2.0);
                     break :blk .{ col.x, col.y, col.z };
                 },
                 PatternType.k3 => blk: {
                     const f, const r, const q = pattern3(.{ .x = x, .y = y });
                     var col = vec3fromHexWithAlpha(0x561111ff); // #561111ff
 
-                    // _ = f;
-                    // _ = r;
-                    // _ = q;
-                    col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0xe2730cff), f); // #e2730cff
-                    col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
-                    col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
+                    col = col.lerp(vec3fromHexWithAlpha(0xe2730cff), f); // #e2730cff
+                    col = col.lerp(vec3fromHexWithAlpha(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
+                    col = col.lerp(vec3fromHexWithAlpha(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
                     // col = laz.Vec3.lerp(col, vec3fromHexWithAlpha(0x0adaffff), 0.5 * q.y * q.y); // #0adaffff
-                    col = laz.Vec3.lerp(
-                        col,
+                    col = col.lerp(
                         vec3fromHexWithAlpha(0x290202ff), // #290202ff
                         0.5 * supersmoothstep(1.1, 1.3, @abs(r.x) + @abs(r.y)),
                     );
@@ -168,26 +148,21 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, pat
                     const normal = laz.Vec3.normalize(.{ .x = fex - f, .y = fey - f, .z = e });
 
                     // we define a light direction
-                    const lig = laz.Vec3.normalize(.{ .x = 0.5, .y = -0.3, .z = -0.1 });
+                    const light = laz.Vec3.normalize(.{ .x = 0.5, .y = -0.3, .z = -0.1 });
                     // we compute the diffuse term
-                    const diff = std.math.clamp(0.5 + 0.9 * laz.Vec3.dot(normal, lig), 0.0, 1.0);
+                    const diff = std.math.clamp(0.5 + 0.9 * laz.Vec3.dot(normal, light), 0.0, 1.0);
                     const lin: laz.Vec3 = .{
                         .x = (normal.z * 0.2 + 0.7) + 0.1 * diff,
                         .y = (normal.z * 0.2 + 0.7) + 0.1 * diff,
                         .z = (normal.z * 0.2 + 0.7) + 0.1 * diff,
                     };
-                    col = .{ .x = col.x * lin.x, .y = col.y * lin.y, .z = col.z * lin.z };
+                    col = col.mul(lin);
 
                     // increase contrast on high frequency details
-                    col = laz.Vec3.mul1(col, f * 2.0);
+                    col = col.mul1(f * 2.0);
 
                     // inverse value and apply a gamma curve to boost contrast
-                    const functor = struct {
-                        pub fn call(value: f32) f32 {
-                            return std.math.pow(f32, 1 - value, 3.0);
-                        }
-                    }.call;
-                    col = forEach3(col, functor);
+                    col = laz.Vec3.ones().add(col.mul1(-1.0)).pow(3.0);
                     break :blk .{ col.x, col.y, col.z };
                 },
             };

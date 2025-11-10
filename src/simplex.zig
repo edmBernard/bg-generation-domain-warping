@@ -11,6 +11,7 @@ fn hash(p: laz.Vec2) laz.Vec2 {
 
 // Simplex noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
 pub fn noise(p: laz.Vec2) f32 {
+    // Constant for triangle mapping
     const K1 = 0.366025404; // (sqrt(3)-1)/2;
     const K2 = 0.211324865; // (3-sqrt(3))/6;
 
