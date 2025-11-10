@@ -4,7 +4,7 @@ pub const vec_len = std.simd.suggestVectorLength(u8) orelse @panic("No SIMD?");
 pub const InnerType: type = @Vector(vec_len, f32);
 
 /// Convert a scalar to a vector by splatting it
-pub inline fn toV(scalar: f32) InnerType {
+pub inline fn toV(comptime scalar: f32) InnerType {
     return @splat(scalar);
 }
 
@@ -18,6 +18,7 @@ pub const Vec2 = struct {
     x: InnerType,
     y: InnerType,
 
+    /// a * b
     pub inline fn mul1(a: Vec2, b: InnerType) Vec2 {
         return .{
             .x = a.x * b,
@@ -25,6 +26,7 @@ pub const Vec2 = struct {
         };
     }
 
+    /// a + b
     pub inline fn add1(a: Vec2, b: InnerType) Vec2 {
         return .{
             .x = a.x + b,
@@ -32,10 +34,27 @@ pub const Vec2 = struct {
         };
     }
 
+    /// a + b
     pub inline fn add(a: Vec2, b: Vec2) Vec2 {
         return .{
             .x = a.x + b.x,
             .y = a.y + b.y,
+        };
+    }
+
+    /// a - b
+    pub inline fn sub1(a: Vec2, b: InnerType) Vec2 {
+        return .{
+            .x = a.x - b,
+            .y = a.y - b,
+        };
+    }
+
+    /// a - b
+    pub inline fn sub(a: Vec2, b: Vec2) Vec2 {
+        return .{
+            .x = a.x - b.x,
+            .y = a.y - b.y,
         };
     }
 
@@ -83,6 +102,14 @@ pub const Vec3 = struct {
             .x = a.x + b.x,
             .y = a.y + b.y,
             .z = a.z + b.z,
+        };
+    }
+
+    pub inline fn sub(a: Vec3, b: Vec3) Vec3 {
+        return .{
+            .x = a.x - b.x,
+            .y = a.y - b.y,
+            .z = a.z - b.z,
         };
     }
 

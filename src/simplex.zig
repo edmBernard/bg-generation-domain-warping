@@ -5,7 +5,7 @@ const laz = @import("linearalgebra");
 /// using this instead of sin improve performance by a factor 5 on the whole generation
 /// and result are similar enough
 inline fn triangle_func(in: laz.InnerType) laz.InnerType {
-    const z = in / laz.toV(4.0);
+    const z = in * laz.toV(0.25);
     const f = laz.toV(2.0) * @abs(z - @floor(z) - laz.toV(0.5));
     return laz.toV(2.0) * f - laz.toV(1.0);
 }
@@ -13,7 +13,7 @@ inline fn triangle_func(in: laz.InnerType) laz.InnerType {
 /// A periodic function that look like a sin with a period of 2
 /// Same as triangle_func but with an easing function to make it like a sine wave
 inline fn periodic_func(in: laz.InnerType) laz.InnerType {
-    const z = in / laz.toV(4.0);
+    const z = in * laz.toV(0.25);
     const f = laz.toV(2.0) * @abs(z - @floor(z) - laz.toV(0.5));
     const g = f * f * (laz.toV(3.0) - laz.toV(2.0) * f);
     return laz.toV(2.0) * g - laz.toV(1.0);
