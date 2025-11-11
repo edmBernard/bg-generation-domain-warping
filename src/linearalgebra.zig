@@ -9,8 +9,22 @@ pub inline fn toV(comptime scalar: f32) InnerType {
 }
 
 // MARK: Helper 1D functions
+
+/// Return the fractional part of a floating point number
 pub inline fn fract(x: InnerType) InnerType {
     return x - @floor(x);
+}
+
+/// Perform Hermite interpolation between two values
+pub inline fn smoothstep(edge0: InnerType, edge1: InnerType, x: InnerType) InnerType {
+    const t = std.math.clamp((x - edge0) / (edge1 - edge0), toV(0.0), toV(1.0));
+    return t * t * (toV(3.0) - toV(2.0) * t);
+}
+
+/// Perform Quintic interpolation between two values
+pub inline fn supersmoothstep(edge0: InnerType, edge1: InnerType, x: InnerType) InnerType {
+    const t = std.math.clamp((x - edge0) / (edge1 - edge0), toV(0.0), toV(1.0));
+    return t * t * t * (toV(10.0) - toV(15.0) * t + toV(6.0) * t * t);
 }
 
 // MARK: Vec2

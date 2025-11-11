@@ -1,5 +1,6 @@
 const std = @import("std");
-const bg_generation = @import("bg_generation");
+const bg_generation_variant1 = @import("bg_generation_variant1");
+const bg_generation_variant2 = @import("bg_generation_variant2");
 const stb_wrapper = @import("stb_wrapper");
 pub const cli = @import("cli.zig");
 
@@ -13,7 +14,14 @@ pub fn main() !void {
 
     // generate image
     const tic = std.time.microTimestamp();
-    var data = try bg_generation.generate_image(allocator, args.width, args.height);
+    var data = switch (args.variant) {
+        1 => try bg_generation_variant1.generate_image(allocator, args.width, args.height),
+        2 => try bg_generation_variant2.generate_image(allocator, args.width, args.height),
+        else => |_| {
+            std.log.err("Unsupported variant: {d}", .{args.variant});
+            return;
+        },
+    };
     defer data.deinit(allocator);
     const tac: i64 = std.time.microTimestamp() - tic;
     std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(tac)) / 1_000_000});

@@ -4,6 +4,7 @@ pub const Params = struct {
     filename: []const u8,
     width: u32,
     height: u32,
+    variant: u32,
 };
 
 const ErrorCli = error{
@@ -45,9 +46,21 @@ pub fn parse_args(allocator: std.mem.Allocator) !Params {
         return ErrorCli.WrongArgument;
     }
 
+    const variant_str = args.next();
+    if (variant_str == null) {
+        std.log.err("Missing variant", .{});
+        return ErrorCli.WrongArgument;
+    }
+    const variant = try std.fmt.parseInt(u32, variant_str.?, 10);
+    if (variant == 0 or variant > 2) {
+        std.log.err("Invalid variant version", .{});
+        return ErrorCli.WrongArgument;
+    }
+
     return Params{
         .filename = filename.?,
         .width = width,
         .height = height,
+        .variant = variant,
     };
 }
