@@ -21,6 +21,15 @@ pub fn build(b: *std.Build) void {
         .imports = &.{},
     });
 
+    const mod_pixel_processor = b.addModule("pixel_processor", .{
+        .root_source_file = b.path("src/pixel_processor.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "linearalgebra", .module = mod_linearalgebra },
+        },
+    });
+
     const mod_simplex = b.addModule("simplex", .{
         .root_source_file = b.path("src/simplex.zig"),
         .target = target,
@@ -36,6 +45,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "linearalgebra", .module = mod_linearalgebra },
+            .{ .name = "pixel_processor", .module = mod_pixel_processor },
             .{ .name = "simplex", .module = mod_simplex },
         },
     });
@@ -45,6 +55,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "linearalgebra", .module = mod_linearalgebra },
+            .{ .name = "pixel_processor", .module = mod_pixel_processor },
             .{ .name = "simplex", .module = mod_simplex },
         },
     });
@@ -85,6 +96,7 @@ pub fn build(b: *std.Build) void {
 
     const mods = [_]*std.Build.Module{
         mod_linearalgebra,
+        mod_pixel_processor,
         mod_simplex,
         mod_main_variant1,
         mod_main_variant2,
