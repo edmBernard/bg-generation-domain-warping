@@ -14,6 +14,7 @@ inline fn hexToVec3(comptime hex: u32) laz.Vec3 {
 }
 
 // rotation matrix to avoid direction artifacts
+// This is expecially true with perlin noise (we can see directional artifacts)
 const angle = std.math.pi / 4.0;
 const mtx = laz.Mat2x2{
     .data = [4]laz.InnerType{

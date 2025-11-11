@@ -27,7 +27,7 @@ pub inline fn smoothstep(edge0: InnerType, edge1: InnerType, x: InnerType) Inner
 /// Perform Quintic interpolation between two values
 pub inline fn supersmoothstep(edge0: InnerType, edge1: InnerType, x: InnerType) InnerType {
     const t = std.math.clamp((x - edge0) / (edge1 - edge0), toV(0.0), toV(1.0));
-    return t * t * t * (toV(10.0) - toV(15.0) * t + toV(6.0) * t * t);
+    return t * t * t * (t * (t * toV(6.0) - toV(15.0)) + toV(10.0));
 }
 
 // MARK: Vec2
