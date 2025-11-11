@@ -112,8 +112,8 @@ const ProcessingFunctor = struct {
         // It should be possible to compute the derivative analytically
         // because 2/3 of the computation is for this derivative
         const e = laz.toV(1.0) / ctx.scale;
-        const fex, _, _ = pattern(.{ .x = x + e, .y = y });
-        const fey, _, _ = pattern(.{ .x = x, .y = y + e });
+        const fex, _, _ = pattern(.{ .x = xs + e, .y = ys });
+        const fey, _, _ = pattern(.{ .x = xs, .y = ys + e });
 
         // compute surface normal
         // normal.x is the derivative of pattern along x
