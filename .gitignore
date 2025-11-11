@@ -7,3 +7,6 @@
 .zig-cache
 
 *.jpeg
+
+# sidecar files for postprocessing software
+*.dop
