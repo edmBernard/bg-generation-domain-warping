@@ -45,7 +45,7 @@ fn fbm(comptime octaves: i32, vec: laz.Vec2) laz.InnerType {
     var f = laz.toV(1.0);
     var a = laz.toV(0.5);
     var t = laz.toV(0.0);
-    for (0..octaves) |_| {
+    inline for (0..octaves) |_| {
         t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
         f *= laz.toV(1.9);
         a *= G;
@@ -61,7 +61,7 @@ fn fbm6(vec: laz.Vec2) laz.InnerType {
     var f = laz.toV(1.0);
     var a = laz.toV(0.5);
     var t = laz.toV(0.0);
-    for (0..6) |_| {
+    inline for (0..6) |_| {
         t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
         f *= laz.toV(2.1);
         a *= G;
@@ -72,14 +72,14 @@ fn fbm6(vec: laz.Vec2) laz.InnerType {
 fn pattern(p: laz.Vec2) struct { laz.InnerType, laz.Vec2, laz.Vec2 } {
     // low frequency
     const q: laz.Vec2 = .{
-        .x = laz.toV(0.5) + laz.toV(0.5) * fbm(4, .{ .x = p.x + laz.toV(1.0), .y = p.y + laz.toV(0.1) }),
-        .y = laz.toV(0.5) + laz.toV(0.5) * fbm(4, .{ .x = p.x + laz.toV(5.2), .y = p.y + laz.toV(1.3) }),
+        .x = laz.toV(0.5) + laz.toV(0.5) * fbm(4, .{ .x = p.x + laz.toV(1.1), .y = p.y + laz.toV(0.1) }),
+        .y = laz.toV(0.5) + laz.toV(0.5) * fbm(4, .{ .x = p.x + laz.toV(5.1), .y = p.y + laz.toV(1.5) }),
     };
 
     // mid frequency
     const r: laz.Vec2 = .{
-        .x = laz.toV(0.5) - laz.toV(0.5) * fbm6(.{ .x = laz.toV(4.1) * q.x, .y = laz.toV(4.1) * q.y }),
-        .y = laz.toV(0.5) - laz.toV(0.5) * fbm6(.{ .x = laz.toV(4.1) * q.x, .y = laz.toV(4.1) * q.y }),
+        .x = laz.toV(0.5) - laz.toV(0.5) * fbm6(.{ .x = p.x + laz.toV(4.1) * q.x, .y = p.y + laz.toV(4.1) * q.y }),
+        .y = laz.toV(0.5) - laz.toV(0.5) * fbm6(.{ .x = p.x + laz.toV(4.1) * q.x, .y = p.y + laz.toV(4.1) * q.y }),
     };
 
     // high frequency
@@ -133,6 +133,8 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
 
             // After the main color is compute we add some lighting to add extra small details.
             // Compute derivative of the pattern : df/dx and df/dy using finite difference
+            // It should be possible to compute the derivative analytically
+            // because 2/3 of the computation is for this derivative
             const e = laz.toV(1.0) / scale;
             const fex, _, _ = pattern(.{ .x = x + e, .y = y });
             const fey, _, _ = pattern(.{ .x = x, .y = y + e });
