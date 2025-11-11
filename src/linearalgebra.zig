@@ -1,5 +1,8 @@
 const std = @import("std");
 
+// I use u8 and not f32 here because at the end of the processing we cast the value to u8.
+// so we need enough f32 value to fill a full vector of u8 values
+// I quickly also test different vector lenght and this seem the fastest
 pub const vec_len = std.simd.suggestVectorLength(u8) orelse @panic("No SIMD?");
 pub const InnerType: type = @Vector(vec_len, f32);
 
@@ -148,12 +151,16 @@ pub const Vec3 = struct {
         };
     }
 
-    pub inline fn pow(a: Vec3, comptime b: InnerType) Vec3 {
-        return .{
-            .x = std.math.pow(InnerType, a.x, b),
-            .y = std.math.pow(InnerType, a.y, b),
-            .z = std.math.pow(InnerType, a.z, b),
-        };
+    /// Power function for integer exponents
+    pub inline fn pow(a: Vec3, comptime b: u32) Vec3 {
+        if (comptime b == 0) {
+            return Vec3.ones();
+        }
+        var res = a;
+        inline for (1..b) |_| {
+            res = res.mul(a);
+        }
+        return res;
     }
 
     // This method is not really usable
@@ -178,7 +185,7 @@ pub const Mat2x2 = struct {
     }
 };
 
-// MARK: Tests
+// MARK: Tests Vec2
 
 test "Vec2 Mul1 Static Method" {
     const v = Vec2{ .x = toV(2.0), .y = toV(3.0) };
@@ -220,4 +227,25 @@ test "Vec2 Add Method" {
     const r = v.add(Vec2{ .x = toV(4.0), .y = toV(5.0) });
     try std.testing.expect(std.meta.eql(r.x, toV(6.0)));
     try std.testing.expect(std.meta.eql(r.y, toV(8.0)));
+}
+
+// MARK: Tests Vec3
+
+test "Vec3 Pow Method" {
+    const v = Vec3{ .x = toV(-2.0), .y = toV(2.0), .z = toV(3.0) };
+
+    const r0 = v.pow(0);
+    try std.testing.expect(std.meta.eql(r0.x, toV(1.0)));
+    try std.testing.expect(std.meta.eql(r0.y, toV(1.0)));
+    try std.testing.expect(std.meta.eql(r0.z, toV(1.0)));
+
+    const r3 = v.pow(3);
+    try std.testing.expect(std.meta.eql(r3.x, toV(-8.0)));
+    try std.testing.expect(std.meta.eql(r3.y, toV(8.0)));
+    try std.testing.expect(std.meta.eql(r3.z, toV(27.0)));
+
+    const r10 = v.pow(10);
+    try std.testing.expect(std.meta.eql(r10.x, toV(1024.0)));
+    try std.testing.expect(std.meta.eql(r10.y, toV(1024.0)));
+    try std.testing.expect(std.meta.eql(r10.z, toV(59049.0)));
 }

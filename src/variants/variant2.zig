@@ -109,7 +109,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
             // Inverse value and apply a gamma curve to boost contrast
             // std.math.pow is not vectorized so we do it manually
             const temp = laz.Vec3.ones().sub(col);
-            col = temp.mul(temp).mul(temp); // gamma 3
+            col = temp.pow(3); // gamma like
 
             const r_u8 = @as(@Vector(laz.vec_len, u8), @intFromFloat(std.math.clamp(col.x * laz.toV(255), laz.toV(0), laz.toV(255))));
             const g_u8 = @as(@Vector(laz.vec_len, u8), @intFromFloat(std.math.clamp(col.y * laz.toV(255), laz.toV(0), laz.toV(255))));
