@@ -31,6 +31,9 @@ inline fn hash(p: laz.Vec2) laz.Vec2 {
 }
 
 /// Simplex noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
+/// For a more complete explanation of the algorithm see :
+/// https://en.wikipedia.org/wiki/Simplex_noise
+/// https://thebookofshaders.com/11/
 pub fn noise(p: laz.Vec2) laz.InnerType {
     // Constant for triangle mapping
     const K1 = laz.toV(0.366025404); // (sqrt(3)-1)/2;

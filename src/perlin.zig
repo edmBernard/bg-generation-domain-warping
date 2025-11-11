@@ -21,6 +21,17 @@ inline fn fake_hash(p: laz.Vec2) laz.Vec2 {
     };
 }
 
+inline fn hash2(p: laz.Vec2) laz.Vec2 {
+    const temp = .{
+        .x = laz.Vec2.dot(p, .{ .x = laz.toV(127.1), .y = laz.toV(311.7) }),
+        .y = laz.Vec2.dot(p, .{ .x = laz.toV(269.5), .y = laz.toV(193.3) }),
+    };
+    return .{
+        .x = laz.toV(-1.0) + laz.toV(2.0) * laz.fract(triangle_func(temp.x) * laz.toV(43758.5453123)),
+        .y = laz.toV(-1.0) + laz.toV(2.0) * laz.fract(triangle_func(temp.y) * laz.toV(43758.5453123)),
+    };
+}
+
 fn fade(t: laz.InnerType) laz.InnerType {
     return t * t * t * (t * (t * laz.toV(6.0) - laz.toV(15.0)) + laz.toV(10.0));
 }
@@ -47,14 +58,10 @@ fn grad(hash: laz.Vec2, x: laz.InnerType, y: laz.InnerType) laz.InnerType {
 // https://cs.nyu.edu/~perlin/noise/
 // Ideally I should have keep the 3D aspect of it but for now 2D is enough
 // and simpler to implement in simd
-pub fn noise(p: laz.Vec2) laz.InnerType {
-    std.log.err("I suppose there is a bug somewhere. It generates directional artifacts.", .{});
+pub fn noise_perlin(p: laz.Vec2) laz.InnerType {
     // Find unit cube that contains point.
-    const i32_v: type = @Vector(laz.vec_len, i32);
-    const XasInt = @as(i32_v, @intFromFloat(@floor(p.x))) & @as(i32_v, @splat(255));
-    const YasInt = @as(i32_v, @intFromFloat(@floor(p.y))) & @as(i32_v, @splat(255));
-    const X = @as(laz.InnerType, @floatFromInt(XasInt));
-    const Y = @as(laz.InnerType, @floatFromInt(YasInt));
+    const X = @floor(p.x);
+    const Y = @floor(p.y);
 
     // Find relative x,y of point in square.
     const x = p.x - @floor(p.x);
@@ -85,4 +92,34 @@ pub fn noise(p: laz.Vec2) laz.InnerType {
         ),
         v,
     );
+}
+
+/// Gradient noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/noise/
+pub fn noise_gradient(p: laz.Vec2) laz.InnerType {
+    // std.log.err("I suppose there is a bug somewhere. It generates directional artifacts.", .{});
+    // Find unit cube that contains point.
+    const ix = @floor(p.x);
+    const iy = @floor(p.y);
+
+    // Find relative x,y of point in square.
+    const fx = p.x - @floor(p.x);
+    const fy = p.y - @floor(p.y);
+
+    // Compute fade curves for each of x,y
+    const u = fade(fx);
+    const v = fade(fy);
+
+    // gradients
+    const ga = hash2(.{ .x = ix + laz.toV(0.0), .y = iy + laz.toV(0.0) });
+    const gb = hash2(.{ .x = ix + laz.toV(1.0), .y = iy + laz.toV(0.0) });
+    const gc = hash2(.{ .x = ix + laz.toV(0.0), .y = iy + laz.toV(1.0) });
+    const gd = hash2(.{ .x = ix + laz.toV(1.0), .y = iy + laz.toV(1.0) });
+
+    // projections
+    const va = ga.dot(.{ .x = fx - laz.toV(0.0), .y = fy - laz.toV(0.0) });
+    const vb = gb.dot(.{ .x = fx - laz.toV(1.0), .y = fy - laz.toV(0.0) });
+    const vc = gc.dot(.{ .x = fx - laz.toV(0.0), .y = fy - laz.toV(1.0) });
+    const vd = gd.dot(.{ .x = fx - laz.toV(1.0), .y = fy - laz.toV(1.0) });
+
+    return va + u * (vb - va) + v * (vc - va) + u * v * (va - vb - vc + vd);
 }
