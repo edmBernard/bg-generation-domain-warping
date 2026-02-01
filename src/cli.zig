@@ -52,7 +52,7 @@ pub fn parse_args(allocator: std.mem.Allocator) !Params {
         return ErrorCli.WrongArgument;
     }
     const variant = try std.fmt.parseInt(u32, variant_str.?, 10);
-    if (variant == 0 or variant > 2) {
+    if (variant == 0 or variant > 3) {
         std.log.err("Invalid variant version", .{});
         return ErrorCli.WrongArgument;
     }

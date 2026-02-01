@@ -1,5 +1,5 @@
 const std = @import("std");
-const laz = @import("linearalgebra");
+const laz = @import("linearalgebra.zig");
 
 pub fn process(data: *[]u8, width: u32, height: u32, context: anytype, functor: anytype) void {
     const iota = std.simd.iota(f32, laz.vec_len);

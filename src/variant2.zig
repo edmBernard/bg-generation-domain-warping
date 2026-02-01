@@ -1,8 +1,9 @@
 //! Simplex noise and fbm implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
 const std = @import("std");
-const laz = @import("linearalgebra");
-const simplex = @import("simplex");
-const ppz = @import("pixel_processor");
+
+const laz = @import("linearalgebra.zig");
+const simplex = @import("simplex.zig");
+const ppz = @import("pixel_processor.zig");
 
 /// The hex color is in format 0xRRGGBBAA
 inline fn hexToVec3(comptime hex: u32) laz.Vec3 {

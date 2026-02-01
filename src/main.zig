@@ -1,8 +1,14 @@
 const std = @import("std");
-const bg_generation_variant1 = @import("bg_generation_variant1");
-const bg_generation_variant2 = @import("bg_generation_variant2");
 const stb_wrapper = @import("stb_wrapper");
-pub const cli = @import("cli.zig");
+
+const variant1 = @import("variant1.zig");
+const variant2 = @import("variant2.zig");
+const variant3 = @import("variant3.zig");
+const laz = @import("linearalgebra.zig");
+const simplex = @import("simplex.zig");
+const ppz = @import("pixel_processor.zig");
+const perlin = @import("perlin.zig");
+const cli = @import("cli.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -15,8 +21,9 @@ pub fn main() !void {
     // generate image
     const tic = std.time.microTimestamp();
     var data = switch (args.variant) {
-        1 => try bg_generation_variant1.generate_image(allocator, args.width, args.height),
-        2 => try bg_generation_variant2.generate_image(allocator, args.width, args.height),
+        1 => try variant1.generate_image(allocator, args.width, args.height),
+        2 => try variant2.generate_image(allocator, args.width, args.height),
+        3 => try variant3.generate_image(allocator, args.width, args.height),
         else => |_| {
             std.log.err("Unsupported variant: {d}", .{args.variant});
             return;
@@ -34,4 +41,17 @@ pub fn main() !void {
     try stb_wrapper.image_write(filename, data.items, args.width, args.height);
 
     std.log.info("Image written successfully to : {s}.", .{filename});
+}
+
+// Import tests from all modules
+test {
+    // Run tests from all submodules
+    _ = cli;
+    _ = simplex;
+    _ = perlin;
+    _ = ppz;
+    _ = laz;
+    _ = variant1;
+    _ = variant2;
+    _ = variant3;
 }

@@ -14,61 +14,9 @@ pub fn build(b: *std.Build) void {
 
     const stb_wrapper = @import("thirdparty/stb/build.zig").build(b);
 
-    const mod_linearalgebra = b.addModule("linearalgebra", .{
-        .root_source_file = b.path("src/linearalgebra.zig"),
+    const zpp_dep = b.dependency("zpp", .{
         .target = target,
         .optimize = optimize,
-        .imports = &.{},
-    });
-
-    const mod_pixel_processor = b.addModule("pixel_processor", .{
-        .root_source_file = b.path("src/pixel_processor.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "linearalgebra", .module = mod_linearalgebra },
-        },
-    });
-
-    const mod_simplex = b.addModule("simplex", .{
-        .root_source_file = b.path("src/simplex.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "linearalgebra", .module = mod_linearalgebra },
-        },
-    });
-
-    const mod_perlin = b.addModule("perlin", .{
-        .root_source_file = b.path("src/perlin.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "linearalgebra", .module = mod_linearalgebra },
-        },
-    });
-
-    const mod_main_variant1 = b.addModule("bg_generation_variant1", .{
-        .root_source_file = b.path("src/variants/variant1.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "linearalgebra", .module = mod_linearalgebra },
-            .{ .name = "pixel_processor", .module = mod_pixel_processor },
-            .{ .name = "simplex", .module = mod_simplex },
-            .{ .name = "perlin", .module = mod_perlin },
-        },
-    });
-    const mod_main_variant2 = b.addModule("bg_generation_variant2", .{
-        .root_source_file = b.path("src/variants/variant2.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "linearalgebra", .module = mod_linearalgebra },
-            .{ .name = "pixel_processor", .module = mod_pixel_processor },
-            .{ .name = "simplex", .module = mod_simplex },
-            .{ .name = "perlin", .module = mod_perlin },
-        },
     });
 
     const exe = b.addExecutable(.{
@@ -78,8 +26,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "bg_generation_variant1", .module = mod_main_variant1 },
-                .{ .name = "bg_generation_variant2", .module = mod_main_variant2 },
+                .{ .name = "zpp", .module = zpp_dep.module("zpp") },
                 .{ .name = "stb_wrapper", .module = stb_wrapper },
             },
         }),
@@ -105,20 +52,9 @@ pub fn build(b: *std.Build) void {
     // Create tests for all modules
     const test_step = b.step("test", "Run tests");
 
-    const mods = [_]*std.Build.Module{
-        mod_linearalgebra,
-        mod_pixel_processor,
-        mod_simplex,
-        mod_perlin,
-        mod_main_variant1,
-        mod_main_variant2,
-        exe.root_module,
-    };
-    for (mods) |mod| {
-        const mod_test = b.addTest(.{
-            .root_module = mod,
-        });
-        const run_mod_test = b.addRunArtifact(mod_test);
-        test_step.dependOn(&run_mod_test.step);
-    }
+    const mod_test = b.addTest(.{
+        .root_module = exe.root_module,
+    });
+    const run_mod_test = b.addRunArtifact(mod_test);
+    test_step.dependOn(&run_mod_test.step);
 }

@@ -1,5 +1,6 @@
 const std = @import("std");
-const laz = @import("linearalgebra");
+
+const laz = @import("linearalgebra.zig");
 
 /// A periodic triangle function
 /// using this instead of sin improve performance by a factor 5 on the whole generation
