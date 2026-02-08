@@ -14,8 +14,9 @@ Command line that generate "beautiful" image based on noise generation. The idea
 ## Dependencies
 
 We use :
-- Zig : 0.15.1
-- [stb_image](https://github.com/nothings/stb) to save result as images
+- Zig : 0.15.2
+- [zpp](https://github.com/edmBernard/zpp) :  SIMD low level processing library.
+- [stb_image](https://github.com/nothings/stb) to save result as images.
 
 
 ### Compilation
