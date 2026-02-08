@@ -1,9 +1,10 @@
 const std = @import("std");
+const zpp = @import("zpp");
 
 // I use u8 and not f32 here because at the end of the processing we cast the value to u8.
 // so we need enough f32 value to fill a full vector of u8 values
 // I quickly also test different vector lenght and this seem the fastest
-pub const vec_len = std.simd.suggestVectorLength(u8) orelse @panic("No SIMD?");
+pub const vec_len = zpp.suggested_vec_len;
 pub const InnerType: type = @Vector(vec_len, f32);
 
 /// Convert a scalar to a vector by splatting it

@@ -19,7 +19,7 @@ const zpp = @import("zpp");
 // MARK: SIMD Vector Configuration - Use zpp's recommended vector length
 // ============================================================================
 
-pub const vec_len = zpp.default_vec_len;
+pub const vec_len = zpp.suggested_vec_len;
 pub const VecF32 = @Vector(vec_len, f32);
 pub const VecU8 = @Vector(vec_len, u8);
 
@@ -330,7 +330,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
     };
 
     const destination = zpp.InterleavedOut(u8, 3, data.items, width, region);
-    const generator = zpp.Generate(VecF32, region, context, domainWarpingProcess);
+    const generator = zpp.Generate(VecF32, context, domainWarpingProcess);
     zpp.Process(generator, destination);
 
     return data;

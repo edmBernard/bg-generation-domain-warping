@@ -6,7 +6,6 @@ const variant2 = @import("variant2.zig");
 const variant3 = @import("variant3.zig");
 const laz = @import("linearalgebra.zig");
 const simplex = @import("simplex.zig");
-const ppz = @import("pixel_processor.zig");
 const perlin = @import("perlin.zig");
 const cli = @import("cli.zig");
 
@@ -49,7 +48,6 @@ test {
     _ = cli;
     _ = simplex;
     _ = perlin;
-    _ = ppz;
     _ = laz;
     _ = variant1;
     _ = variant2;

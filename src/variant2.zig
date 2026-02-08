@@ -3,7 +3,9 @@ const std = @import("std");
 
 const laz = @import("linearalgebra.zig");
 const simplex = @import("simplex.zig");
-const ppz = @import("pixel_processor.zig");
+const zpp = @import("zpp");
+
+const VecU8 = @Vector(laz.vec_len, u8);
 
 /// The hex color is in format 0xRRGGBBAA
 inline fn hexToVec3(comptime hex: u32) laz.Vec3 {
@@ -67,7 +69,7 @@ const ProcessingFunctor = struct {
     scale: laz.InnerType,
     sin_time: laz.InnerType,
 
-    pub inline fn process(ctx: ProcessingFunctor, x: anytype, y: anytype) [3]laz.InnerType {
+    pub inline fn process(ctx: ProcessingFunctor, x: laz.InnerType, y: laz.InnerType) [3]VecU8 {
         const xs = x / ctx.scale + ctx.sin_time;
         const ys = y / ctx.scale + ctx.sin_time;
 
@@ -100,7 +102,14 @@ const ProcessingFunctor = struct {
         const temp = laz.Vec3.ones().sub(col);
         col = temp.pow(3); // gamma like
 
-        return .{ col.x, col.y, col.z };
+        // Convert from [0, 1] float to [0, 255] u8
+        const splat_0: laz.InnerType = @splat(0.0);
+        const splat_255: laz.InnerType = @splat(255.0);
+        return .{
+            @intFromFloat(@max(splat_0, @min(splat_255, col.x * splat_255))),
+            @intFromFloat(@max(splat_0, @min(splat_255, col.y * splat_255))),
+            @intFromFloat(@max(splat_0, @min(splat_255, col.z * splat_255))),
+        };
     }
 };
 
@@ -121,9 +130,10 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
         .sin_time = sin_time,
     };
 
-    // This call hide the complexity of the pixel processing using simd operations
-    // It will call ProcessingFunctor.process for each "pixel"/"simd line"
-    ppz.process(&data.items, width, height, context, ProcessingFunctor.process);
+    const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
+    const destination = zpp.InterleavedOut(u8, 3, data.items, width, region);
+    const generator = zpp.Generate(laz.InnerType, context, ProcessingFunctor.process);
+    zpp.Process(generator, destination);
 
     return data;
 }
