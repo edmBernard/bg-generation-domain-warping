@@ -173,9 +173,9 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
     };
 
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
-    const destination = zpp.InterleavedOut(u8, 3, data.items, width, region);
-    const generator = zpp.Generate(laz.InnerType, context, ProcessingFunctor.process);
-    zpp.Process(generator, destination);
+    const destination = zpp.makeInterleavedDest(u8, 3, data.items, width, region);
+    const generator = zpp.generate(laz.InnerType, context, ProcessingFunctor.process);
+    zpp.process(generator, destination);
 
     return data;
 }

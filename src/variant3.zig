@@ -25,7 +25,7 @@ pub const VecU8 = @Vector(vec_len, u8);
 
 /// Convenience alias for zpp.splat with VecF32
 inline fn splat(scalar: f32) VecF32 {
-    return zpp.splat(VecF32, scalar);
+    return zpp.math.splat(VecF32, scalar);
 }
 
 // ============================================================================
@@ -329,9 +329,9 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !st
         .height = height,
     };
 
-    const destination = zpp.InterleavedOut(u8, 3, data.items, width, region);
-    const generator = zpp.Generate(VecF32, context, domainWarpingProcess);
-    zpp.Process(generator, destination);
+    const destination = zpp.makeInterleavedDest(u8, 3, data.items, width, region);
+    const generator = zpp.generate(VecF32, context, domainWarpingProcess);
+    zpp.process(generator, destination);
 
     return data;
 }
