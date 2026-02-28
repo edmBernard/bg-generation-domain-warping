@@ -186,6 +186,18 @@ pub const Mat2x2 = struct {
     }
 };
 
+// MARK: Matrix3x3
+pub const Mat3x3 = struct {
+    data: [9]InnerType,
+    pub inline fn mulvec3(m: Mat3x3, b: Vec3) Vec3 {
+        return .{
+            .x = m.data[0] * b.x + m.data[1] * b.y + m.data[2] * b.z,
+            .y = m.data[3] * b.x + m.data[4] * b.y + m.data[5] * b.z,
+            .z = m.data[6] * b.x + m.data[7] * b.y + m.data[8] * b.z,
+        };
+    }
+};
+
 // MARK: Tests Vec2
 
 test "Vec2 Mul1 Static Method" {

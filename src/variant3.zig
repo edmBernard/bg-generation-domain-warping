@@ -1,4 +1,5 @@
 //! Simplex noise and fbm implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
+//! This variant uses 3D Simplex noise with time as the Z dimension for in-place evolution.
 const std = @import("std");
 
 const laz = @import("linearalgebra.zig");
@@ -16,81 +17,88 @@ inline fn hexToVec3(comptime hex: u32) laz.Vec3 {
     };
 }
 
-// rotation matrix to avoid direction artifacts
-const angle = std.math.pi / 4.0;
-const mtx = laz.Mat2x2{
-    .data = [4]laz.InnerType{
-        @splat(@cos(angle)),
-        @splat(@sin(angle)),
-        @splat(-@sin(angle)),
-        @splat(@cos(angle)),
+// 3D rotation matrix for FBM octave decorrelation
+// Compose Rz(pi/4) and Rx(pi/6)
+const cos_z = @cos(std.math.pi / 4.0);
+const sin_z = @sin(std.math.pi / 4.0);
+const cos_x = @cos(std.math.pi / 6.0);
+const sin_x = @sin(std.math.pi / 6.0);
+
+// Rz(pi/4) * Rx(pi/6):
+// | cos_z  -sin_z*cos_x  sin_z*sin_x |
+// | sin_z   cos_z*cos_x -cos_z*sin_x |
+// |  0      sin_x         cos_x       |
+const mtx3 = laz.Mat3x3{
+    .data = [9]laz.InnerType{
+        @splat(cos_z),         @splat(-sin_z * cos_x), @splat(sin_z * sin_x),
+        @splat(sin_z),         @splat(cos_z * cos_x),  @splat(-cos_z * sin_x),
+        @splat(@as(f32, 0.0)), @splat(sin_x),          @splat(cos_x),
     },
 };
 
-/// fractional Brownian motion (fBm), also called a fractal Brownian motion
-/// https://en.wikipedia.org/wiki/Fractional_Brownian_motion
-/// fbm noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
-fn fbm(comptime octaves: i32, vec: laz.Vec2) laz.InnerType {
-    // H (Hurst exponent) determines the self similarity it recommand to use 0.5
-    const H = 1.0; // change a lot the visual aspect
+/// fractional Brownian motion (fBm) using 3D Simplex noise
+fn fbm3d(comptime octaves: i32, vec: laz.Vec3) laz.InnerType {
+    const H = 1.0;
     const G = laz.toV(std.math.exp2(-H));
     var f = laz.toV(1.0);
     var a = laz.toV(0.5);
     var t = laz.toV(0.0);
+    var p = vec;
     inline for (0..octaves) |_| {
-        t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
+        t += a * simplex.noise3d(.{
+            .x = p.x * f,
+            .y = p.y * f,
+            .z = p.z * f,
+        });
+        p = mtx3.mulvec3(p);
         f *= laz.toV(1.9);
         a *= G;
     }
     return t;
 }
 
-fn pattern(p: laz.Vec2) struct { laz.InnerType, laz.Vec2, laz.Vec2 } {
+fn pattern(p: laz.Vec3) struct { laz.InnerType, laz.Vec2, laz.Vec2 } {
     // low frequency
     const q: laz.Vec2 = .{
-        .x = laz.toV(0.5) + laz.toV(0.5) * fbm(8, .{ .x = p.x + laz.toV(1.1), .y = p.y + laz.toV(0.1) }),
-        .y = laz.toV(0.5) + laz.toV(0.5) * fbm(8, .{ .x = p.x + laz.toV(5.1), .y = p.y + laz.toV(1.5) }),
+        .x = laz.toV(0.5) + laz.toV(0.5) * fbm3d(8, .{ .x = p.x + laz.toV(1.1), .y = p.y + laz.toV(0.1), .z = p.z }),
+        .y = laz.toV(0.5) + laz.toV(0.5) * fbm3d(8, .{ .x = p.x + laz.toV(5.1), .y = p.y + laz.toV(1.5), .z = p.z }),
     };
 
     // mid frequency
     const r: laz.Vec2 = .{
-        .x = laz.toV(0.5) - laz.toV(0.5) * fbm(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y }),
-        .y = laz.toV(0.5) - laz.toV(0.5) * fbm(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y }),
+        .x = laz.toV(0.5) - laz.toV(0.5) * fbm3d(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y, .z = p.z }),
+        .y = laz.toV(0.5) - laz.toV(0.5) * fbm3d(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y, .z = p.z }),
     };
 
     // high frequency
-    const f = laz.toV(0.5) + laz.toV(0.5) * fbm(10, p.add(r.mul1(laz.toV(8.1))));
+    const r_scaled: laz.Vec2 = r.mul1(laz.toV(8.1));
+    const f = laz.toV(0.5) + laz.toV(0.5) * fbm3d(10, .{
+        .x = p.x + r_scaled.x,
+        .y = p.y + r_scaled.y,
+        .z = p.z,
+    });
     return .{ f, r, q };
 }
 
-// I'm not really sure this processing function make the code more readable
-// We pass this functor to the pixel processor that will call it for each pixel line
 const ProcessingFunctor = struct {
     scale: laz.InnerType,
-    sin_time: laz.InnerType,
+    time: laz.InnerType,
 
     pub inline fn process(ctx: ProcessingFunctor, x: laz.InnerType, y: laz.InnerType) [3]VecU8 {
-        const xs = x / ctx.scale + ctx.sin_time;
-        const ys = y / ctx.scale + ctx.sin_time;
+        const xs = x / ctx.scale;
+        const ys = y / ctx.scale;
 
-        // Compute base pattern
-        // f represents the intensity of the pattern high frequency details
-        // r are the mid frequency details
-        // q are the low frequency details
-        const f, const r, const q = pattern(.{ .x = xs, .y = ys });
+        // Compute base pattern with time as Z dimension
+        const f, const r, const q = pattern(.{ .x = xs, .y = ys, .z = ctx.time * laz.toV(0.1) });
 
         // Compute color of the pattern
-        // We basically mix several colors depending on the pattern values
-        // Be carefull we do a color inversion at the end.
-        // So color are redish here but will produce blueish result later.
-        var col = hexToVec3(0x561111ff); // #561111ff
-        col = col.lerp(hexToVec3(0xe2730cff), f); // #e2730cff
-        col = col.lerp(hexToVec3(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
-        col = col.lerp(hexToVec3(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
+        var col = hexToVec3(0x561111ff);
+        col = col.lerp(hexToVec3(0xe2730cff), f);
+        col = col.lerp(hexToVec3(0xffffffff), laz.Vec2.dot(r, r));
+        col = col.lerp(hexToVec3(0x832121ff), laz.Vec2.dot(q, q));
 
-        // This extra step add extra color in black area
         col = col.lerp(
-            hexToVec3(0x290202ff), // #290202ff
+            hexToVec3(0x290202ff),
             laz.toV(0.5) * laz.smoothstep(laz.toV(1.1), laz.toV(1.3), @abs(r.x) + @abs(r.y)),
         );
 
@@ -98,9 +106,8 @@ const ProcessingFunctor = struct {
         col = col.mul1(f * laz.toV(2.0));
 
         // Inverse value and apply a gamma curve to boost contrast
-        // std.math.pow is not vectorized so we do it manually
         const temp = laz.Vec3.ones().sub(col);
-        col = temp.pow(3); // gamma like
+        col = temp.pow(3);
 
         // Convert from [0, 1] float to [0, 255] u8
         const splat_0: laz.InnerType = @splat(0.0);
@@ -114,17 +121,16 @@ const ProcessingFunctor = struct {
 };
 
 /// Generate an image of given width and height using domain warping and fbm noise
-/// The code is a bit long and hard to read mainly because it use simd operations to speed up processing
 pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
     const scale = laz.toV(1000.0);
-    const sin_time: laz.InnerType = @splat(@sin(time));
+    const time_splat: laz.InnerType = @splat(time);
 
     const context = ProcessingFunctor{
         .scale = scale,
-        .sin_time = sin_time,
+        .time = time_splat,
     };
 
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
