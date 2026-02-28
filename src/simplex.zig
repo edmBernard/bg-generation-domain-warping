@@ -14,55 +14,7 @@ const zpp = @import("zpp");
 const working_type = @import("working_type.zig");
 const f32v = working_type.f32v;
 const laf = zpp.zla.with(f32v);
-
-/// A periodic triangle function with period 4 and range [-1, 1].
-/// Using this instead of sin improves performance by a factor of 5 on the whole generation
-/// and results are similar enough.
-inline fn triangle_func(in: f32v) f32v {
-    const z = in * laf.splat(0.25);
-    const f = laf.splat(2.0) * @abs(z - @floor(z) - laf.splat(0.5));
-    return laf.splat(2.0) * f - laf.splat(1.0);
-}
-
-/// A smoothstep-eased periodic function with period 4 and range [-1, 1].
-/// Same shape as `triangle_func` but with a cubic ease (smoothstep) applied,
-/// producing a closer approximation to sin.
-inline fn periodic_func(in: f32v) f32v {
-    const z = in * laf.splat(0.25);
-    const f = laf.splat(2.0) * @abs(z - @floor(z) - laf.splat(0.5));
-    const g = f * f * (laf.splat(3.0) - laf.splat(2.0) * f);
-    return laf.splat(2.0) * g - laf.splat(1.0);
-}
-
-/// Hash a 2D lattice point to a pseudo-random gradient vector in [-1, 1]^2.
-/// Each component is computed as a dot product with magic constants, passed through
-/// `triangle_func`, multiplied by a large number, then `fract`ed and remapped to [-1, 1].
-inline fn hash2(p: laf.Vec2) laf.Vec2 {
-    const temp = .{
-        .x = p.dot(.{ .x = @splat(127.1), .y = @splat(311.7) }),
-        .y = p.dot(.{ .x = @splat(269.5), .y = @splat(183.3) }),
-    };
-    return .{
-        .x = laf.splat(-1.0) + laf.splat(2.0) * zpp.math.fract(triangle_func(temp.x) * laf.splat(43758.5453123)),
-        .y = laf.splat(-1.0) + laf.splat(2.0) * zpp.math.fract(triangle_func(temp.y) * laf.splat(43758.5453123)),
-    };
-}
-
-/// Hash a 3D lattice point to a pseudo-random gradient vector in [-1, 1]^3.
-/// Three independent dot products with different magic constants, each passed through
-/// `triangle_func` + `fract`, then remapped to [-1, 1].
-inline fn hash3(p: laf.Vec3) laf.Vec3 {
-    const temp: laf.Vec3 = .{
-        .x = p.dot(.{ .x = @splat(127.1), .y = @splat(311.7), .z = @splat(74.7) }),
-        .y = p.dot(.{ .x = @splat(269.5), .y = @splat(183.3), .z = @splat(246.1) }),
-        .z = p.dot(.{ .x = @splat(113.5), .y = @splat(271.9), .z = @splat(124.6) }),
-    };
-    return .{
-        .x = laf.splat(-1.0) + laf.splat(2.0) * zpp.math.fract(triangle_func(temp.x) * laf.splat(43758.5453123)),
-        .y = laf.splat(-1.0) + laf.splat(2.0) * zpp.math.fract(triangle_func(temp.y) * laf.splat(43758.5453123)),
-        .z = laf.splat(-1.0) + laf.splat(2.0) * zpp.math.fract(triangle_func(temp.z) * laf.splat(43758.5453123)),
-    };
-}
+const hash = @import("hash.zig");
 
 /// 2D simplex noise. Returns a value in approximately [-1, 1].
 ///
@@ -104,9 +56,9 @@ pub fn noise(p: laf.Vec2) laf.InnerType {
 
     // Falloff^4 * dot(gradient, offset) per corner
     const n: laf.Vec3 = .{
-        .x = na * na * na * na * a.dot(hash2(.{ .x = i + laf.splat(0.0), .y = j + laf.splat(0.0) })),
-        .y = nb * nb * nb * nb * b.dot(hash2(.{ .x = i + o.x, .y = j + o.y })),
-        .z = nc * nc * nc * nc * c.dot(hash2(.{ .x = i + laf.splat(1.0), .y = j + laf.splat(1.0) })),
+        .x = na * na * na * na * a.dot(hash.hash2(.{ .x = i + laf.splat(0.0), .y = j + laf.splat(0.0) })),
+        .y = nb * nb * nb * nb * b.dot(hash.hash2(.{ .x = i + o.x, .y = j + o.y })),
+        .z = nc * nc * nc * nc * c.dot(hash.hash2(.{ .x = i + laf.splat(1.0), .y = j + laf.splat(1.0) })),
     };
 
     // Step 5: Scale by 70 to normalize
@@ -185,10 +137,10 @@ pub fn noise3d(p: laf.Vec3) laf.InnerType {
     t3 = t3 * t3;
 
     // Gradient contribution: falloff^4 * dot(gradient, offset)
-    const g0 = hash3(.{ .x = i, .y = j, .z = k });
-    const g1 = hash3(.{ .x = i + c1_i, .y = j + c1_j, .z = k + c1_k });
-    const g2 = hash3(.{ .x = i + c2_i, .y = j + c2_j, .z = k + c2_k });
-    const g3 = hash3(.{ .x = i + laf.splat(1), .y = j + laf.splat(1), .z = k + laf.splat(1) });
+    const g0 = hash.hash3(.{ .x = i, .y = j, .z = k });
+    const g1 = hash.hash3(.{ .x = i + c1_i, .y = j + c1_j, .z = k + c1_k });
+    const g2 = hash.hash3(.{ .x = i + c2_i, .y = j + c2_j, .z = k + c2_k });
+    const g3 = hash.hash3(.{ .x = i + laf.splat(1), .y = j + laf.splat(1), .z = k + laf.splat(1) });
 
     const n0 = t0 * t0 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
     const n1 = t1 * t1 * (g1.x * x1 + g1.y * y1 + g1.z * z1);

@@ -6,8 +6,6 @@ const variant1 = @import("variant1.zig");
 const variant2 = @import("variant2.zig");
 const variant3 = @import("variant3.zig");
 const variant4 = @import("variant4.zig");
-const simplex = @import("simplex.zig");
-const perlin = @import("perlin.zig");
 const cli = @import("cli.zig");
 
 fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
@@ -85,9 +83,12 @@ pub fn main() !void {
 // Import tests from all modules
 test {
     // Run tests from all submodules
+    _ = @import("periodic.zig");
+    _ = @import("hash.zig");
+    _ = @import("color.zig");
     _ = cli;
-    _ = simplex;
-    _ = perlin;
+    _ = @import("simplex.zig");
+    _ = @import("perlin.zig");
     _ = variant1;
     _ = variant2;
     _ = variant3;
