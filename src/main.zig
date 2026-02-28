@@ -6,6 +6,7 @@ const variant1 = @import("variant1.zig");
 const variant2 = @import("variant2.zig");
 const variant3 = @import("variant3.zig");
 const variant4 = @import("variant4.zig");
+const variant5 = @import("variant5.zig");
 const cli = @import("cli.zig");
 
 fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
@@ -14,6 +15,7 @@ fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: 
         2 => try variant2.generate_image(allocator, width, height, time),
         3 => try variant3.generate_image(allocator, width, height, time),
         4 => try variant4.generate_image(allocator, width, height, time),
+        5 => try variant5.generate_image(allocator, width, height, time),
         else => |_| {
             std.log.err("Unsupported variant: {d}", .{variant});
             return error.UnsupportedVariant;
