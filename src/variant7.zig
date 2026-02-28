@@ -2,7 +2,7 @@
 const std = @import("std");
 const zpp = @import("zpp");
 
-const simplex = @import("simplex.zig");
+const value_noise = @import("value_noise.zig");
 const color = @import("color.zig");
 
 const working_type = @import("working_type.zig");
@@ -26,14 +26,14 @@ const mtx = laf.Mat2x2{
 fn fbm(comptime octaves: i32, vec: laf.Vec2) f32v {
     // H (Hurst exponent) determines the self similarity it recommand to use 0.5
     const H = 0.5; // change a lot the visual aspect
-    const G = laf.splat(std.math.exp2(-H));
+    const G = laf.splat(std.math.exp(-H));
     var f = laf.splat(1.0);
     var a = laf.splat(0.5);
     var t = laf.splat(0.0);
     var p = vec;
     inline for (0..octaves) |_| {
         p = mtx.mulvec(p);
-        t += a * simplex.noise(p.sub1(@splat(1.0)).mul1(f));
+        t += a * value_noise.noise(p.sub1(@splat(1.0)).mul1(f));
         f *= laf.splat(1.9);
         a *= G;
     }
@@ -42,8 +42,8 @@ fn fbm(comptime octaves: i32, vec: laf.Vec2) f32v {
 
 fn pattern(p: laf.Vec2) laf.InnerType {
     // low frequency
-    const q_offset: laf.Vec2 = .{ .x = @splat(15), .y = @splat(6) };
-    const q = fbm(14, p.mul1(@splat(1.0)).add(q_offset));
+    const q_offset: laf.Vec2 = .{ .x = @splat(5), .y = @splat(6) };
+    const q = fbm(14, p.mul1(@splat(6.0)).add(q_offset));
 
     // mid frequency
     const r_offset: laf.Vec2 = .{ .x = @splat(0.3), .y = @splat(0.6) };
@@ -83,7 +83,7 @@ const ProcessingFunctor = struct {
             .z = @cos(col.z),
         };
         col = col.mul(dark_orange).add(gray);
-        col = col.pow(3);
+        col = col.pow(2);
 
         // Convert from [0, 1] float to [0, 255] u8
         const splat_0: f32v = @splat(0.0);
@@ -102,7 +102,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
-    const scale = laf.splat(100000.0);
+    const scale = laf.splat(3000.0);
     const sin_time: laf.InnerType = @splat(@sin(time));
 
     const context = ProcessingFunctor{
