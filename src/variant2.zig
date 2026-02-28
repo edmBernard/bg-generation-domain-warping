@@ -1,25 +1,19 @@
 //! Simplex noise and fbm implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
 const std = @import("std");
-
-const laz = @import("linearalgebra.zig");
-const simplex = @import("simplex.zig");
 const zpp = @import("zpp");
 
-const VecU8 = @Vector(laz.vec_len, u8);
+const simplex = @import("simplex.zig");
+const color = @import("color.zig");
 
-/// The hex color is in format 0xRRGGBBAA
-inline fn hexToVec3(comptime hex: u32) laz.Vec3 {
-    return .{
-        .x = laz.toV(@as(f32, @floatFromInt((hex & 0xFF000000) >> 24)) / 255.0),
-        .y = laz.toV(@as(f32, @floatFromInt((hex & 0x00FF0000) >> 16)) / 255.0),
-        .z = laz.toV(@as(f32, @floatFromInt((hex & 0x0000FF00) >> 8)) / 255.0),
-    };
-}
+const working_type = @import("working_type.zig");
+const u8v = working_type.u8v;
+const f32v = working_type.f32v;
+const laf = zpp.zla.with(f32v);
 
 // rotation matrix to avoid direction artifacts
 const angle = std.math.pi / 4.0;
-const mtx = laz.Mat2x2{
-    .data = [4]laz.InnerType{
+const mtx = laf.Mat2x2{
+    .data = [4]f32v{
         @splat(@cos(angle)),
         @splat(@sin(angle)),
         @splat(-@sin(angle)),
@@ -30,46 +24,46 @@ const mtx = laz.Mat2x2{
 /// fractional Brownian motion (fBm), also called a fractal Brownian motion
 /// https://en.wikipedia.org/wiki/Fractional_Brownian_motion
 /// fbm noise implementation adapted from Inigo Quilez : https://iquilezles.org/articles/fbm/
-fn fbm(comptime octaves: i32, vec: laz.Vec2) laz.InnerType {
+fn fbm(comptime octaves: i32, vec: laf.Vec2) f32v {
     // H (Hurst exponent) determines the self similarity it recommand to use 0.5
     const H = 1.0; // change a lot the visual aspect
-    const G = laz.toV(std.math.exp2(-H));
-    var f = laz.toV(1.0);
-    var a = laz.toV(0.5);
-    var t = laz.toV(0.0);
+    const G = laf.splat(std.math.exp2(-H));
+    var f = laf.splat(1.0);
+    var a = laf.splat(0.5);
+    var t = laf.splat(0.0);
     inline for (0..octaves) |_| {
-        t += a * simplex.noise(mtx.mulvec2(vec).mul1(f));
-        f *= laz.toV(1.9);
+        t += a * simplex.noise(mtx.mulvec(vec).mul1(f));
+        f *= laf.splat(1.9);
         a *= G;
     }
     return t;
 }
 
-fn pattern(p: laz.Vec2) struct { laz.InnerType, laz.Vec2, laz.Vec2 } {
+fn pattern(p: laf.Vec2) struct { laf.InnerType, laf.Vec2, laf.Vec2 } {
     // low frequency
-    const q: laz.Vec2 = .{
-        .x = laz.toV(0.5) + laz.toV(0.5) * fbm(8, .{ .x = p.x + laz.toV(1.1), .y = p.y + laz.toV(0.1) }),
-        .y = laz.toV(0.5) + laz.toV(0.5) * fbm(8, .{ .x = p.x + laz.toV(5.1), .y = p.y + laz.toV(1.5) }),
+    const q: laf.Vec2 = .{
+        .x = laf.splat(0.5) + laf.splat(0.5) * fbm(8, .{ .x = p.x + laf.splat(1.1), .y = p.y + laf.splat(0.1) }),
+        .y = laf.splat(0.5) + laf.splat(0.5) * fbm(8, .{ .x = p.x + laf.splat(5.1), .y = p.y + laf.splat(1.5) }),
     };
 
     // mid frequency
-    const r: laz.Vec2 = .{
-        .x = laz.toV(0.5) - laz.toV(0.5) * fbm(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y }),
-        .y = laz.toV(0.5) - laz.toV(0.5) * fbm(6, .{ .x = p.x + laz.toV(6.1) * q.x, .y = p.y + laz.toV(6.1) * q.y }),
+    const r: laf.Vec2 = .{
+        .x = laf.splat(0.5) - laf.splat(0.5) * fbm(6, .{ .x = p.x + laf.splat(6.1) * q.x, .y = p.y + laf.splat(6.1) * q.y }),
+        .y = laf.splat(0.5) - laf.splat(0.5) * fbm(6, .{ .x = p.x + laf.splat(6.1) * q.x, .y = p.y + laf.splat(6.1) * q.y }),
     };
 
     // high frequency
-    const f = laz.toV(0.5) + laz.toV(0.5) * fbm(10, p.add(r.mul1(laz.toV(8.1))));
+    const f = laf.splat(0.5) + laf.splat(0.5) * fbm(10, p.add(r.mul1(laf.splat(8.1))));
     return .{ f, r, q };
 }
 
 // I'm not really sure this processing function make the code more readable
 // We pass this functor to the pixel processor that will call it for each pixel line
 const ProcessingFunctor = struct {
-    scale: laz.InnerType,
-    sin_time: laz.InnerType,
+    scale: f32v,
+    sin_time: f32v,
 
-    pub inline fn process(ctx: ProcessingFunctor, x: laz.InnerType, y: laz.InnerType) [3]VecU8 {
+    pub inline fn process(ctx: ProcessingFunctor, x: f32v, y: f32v) [3]u8v {
         const xs = x / ctx.scale + ctx.sin_time;
         const ys = y / ctx.scale + ctx.sin_time;
 
@@ -83,28 +77,28 @@ const ProcessingFunctor = struct {
         // We basically mix several colors depending on the pattern values
         // Be carefull we do a color inversion at the end.
         // So color are redish here but will produce blueish result later.
-        var col = hexToVec3(0x561111ff); // #561111ff
-        col = col.lerp(hexToVec3(0xe2730cff), f); // #e2730cff
-        col = col.lerp(hexToVec3(0xffffffff), laz.Vec2.dot(r, r)); // #ffffffff
-        col = col.lerp(hexToVec3(0x832121ff), laz.Vec2.dot(q, q)); // #832121ff
+        var col = color.hexToVec3(0x561111ff); // #561111ff
+        col = col.lerp(color.hexToVec3(0xe2730cff), f); // #e2730cff
+        col = col.lerp(color.hexToVec3(0xffffffff), r.dot(r)); // #ffffffff
+        col = col.lerp(color.hexToVec3(0x832121ff), q.dot(q)); // #832121ff
 
         // This extra step add extra color in black area
         col = col.lerp(
-            hexToVec3(0x290202ff), // #290202ff
-            laz.toV(0.5) * laz.smoothstep(laz.toV(1.1), laz.toV(1.3), @abs(r.x) + @abs(r.y)),
+            color.hexToVec3(0x290202ff), // #290202ff
+            laf.splat(0.5) * zpp.math.smoothstep(laf.splat(1.1), laf.splat(1.3), @abs(r.x) + @abs(r.y)),
         );
 
         // Increase contrast on high frequency details
-        col = col.mul1(f * laz.toV(2.0));
+        col = col.mul1(f * laf.splat(2.0));
 
         // Inverse value and apply a gamma curve to boost contrast
         // std.math.pow is not vectorized so we do it manually
-        const temp = laz.Vec3.ones().sub(col);
+        const temp = laf.Vec3.ones.sub(col);
         col = temp.pow(3); // gamma like
 
         // Convert from [0, 1] float to [0, 255] u8
-        const splat_0: laz.InnerType = @splat(0.0);
-        const splat_255: laz.InnerType = @splat(255.0);
+        const splat_0: f32v = @splat(0.0);
+        const splat_255: f32v = @splat(255.0);
         return .{
             @intFromFloat(@max(splat_0, @min(splat_255, col.x * splat_255))),
             @intFromFloat(@max(splat_0, @min(splat_255, col.y * splat_255))),
@@ -119,8 +113,8 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
-    const scale = laz.toV(1000.0);
-    const sin_time: laz.InnerType = @splat(@sin(time));
+    const scale = laf.splat(1000.0);
+    const sin_time: laf.InnerType = @splat(@sin(time));
 
     const context = ProcessingFunctor{
         .scale = scale,
@@ -129,7 +123,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
 
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
     const destination = zpp.makeInterleavedDest(u8, 3, data.items, width, region);
-    const generator = zpp.generate(laz.InnerType, context, ProcessingFunctor.process);
+    const generator = zpp.generate(laf.InnerType, context, ProcessingFunctor.process);
     zpp.process(generator, destination);
 
     return data;

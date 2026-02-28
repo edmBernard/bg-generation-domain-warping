@@ -1,10 +1,11 @@
 const std = @import("std");
+const zpp = @import("zpp");
 const stb_wrapper = @import("stb_wrapper");
 
 const variant1 = @import("variant1.zig");
 const variant2 = @import("variant2.zig");
 const variant3 = @import("variant3.zig");
-const laz = @import("linearalgebra.zig");
+
 const simplex = @import("simplex.zig");
 const perlin = @import("perlin.zig");
 const cli = @import("cli.zig");
@@ -86,7 +87,6 @@ test {
     _ = cli;
     _ = simplex;
     _ = perlin;
-    _ = laz;
     _ = variant1;
     _ = variant2;
     _ = variant3;
