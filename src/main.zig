@@ -5,7 +5,7 @@ const stb_wrapper = @import("stb_wrapper");
 const variant1 = @import("variant1.zig");
 const variant2 = @import("variant2.zig");
 const variant3 = @import("variant3.zig");
-
+const variant4 = @import("variant4.zig");
 const simplex = @import("simplex.zig");
 const perlin = @import("perlin.zig");
 const cli = @import("cli.zig");
@@ -15,6 +15,7 @@ fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: 
         1 => try variant1.generate_image(allocator, width, height, time),
         2 => try variant2.generate_image(allocator, width, height, time),
         3 => try variant3.generate_image(allocator, width, height, time),
+        4 => try variant4.generate_image(allocator, width, height, time),
         else => |_| {
             std.log.err("Unsupported variant: {d}", .{variant});
             return error.UnsupportedVariant;
