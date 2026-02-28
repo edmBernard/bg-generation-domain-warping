@@ -83,7 +83,7 @@ const ProcessingFunctor = struct {
             .z = @cos(col.z),
         };
         col = col.mul(dark_orange).add(gray);
-        col = col.pow(2);
+        col = col.pow(3);
 
         // Convert from [0, 1] float to [0, 255] u8
         const splat_0: f32v = @splat(0.0);
