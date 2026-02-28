@@ -102,7 +102,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
-    const scale = laf.splat(3000.0);
+    const scale = laf.splat(1000.0);
     const sin_time: laf.InnerType = @splat(@sin(time));
 
     const context = ProcessingFunctor{
