@@ -1,10 +1,15 @@
 const std = @import("std");
 
+pub const Mode = union(enum) {
+    image: struct { filename: []const u8 },
+    video: struct { fps: u32, total_frames: u32 },
+};
+
 pub const Params = struct {
-    filename: []const u8,
     width: u32,
     height: u32,
     variant: u32,
+    mode: Mode,
 };
 
 const ErrorCli = error{
@@ -20,11 +25,12 @@ pub fn parse_args(allocator: std.mem.Allocator) !Params {
     // skip executable name
     _ = args.skip();
 
-    const filename = args.next();
-    if (filename == null) {
-        std.log.err("Missing filename", .{});
+    const first_arg = args.next();
+    if (first_arg == null) {
+        std.log.err("Missing filename or 'video' command", .{});
         return ErrorCli.WrongArgument;
     }
+
     const width_str = args.next();
     if (width_str == null) {
         std.log.err("Missing width", .{});
@@ -57,10 +63,43 @@ pub fn parse_args(allocator: std.mem.Allocator) !Params {
         return ErrorCli.WrongArgument;
     }
 
+    const is_image = !std.mem.eql(u8, first_arg.?, "video");
+
+    if (is_image) {
+        return Params{
+            .width = width,
+            .height = height,
+            .variant = variant,
+            .mode = .{ .image = .{ .filename = first_arg.? } },
+        };
+    }
+
+    const fps_str = args.next();
+    if (fps_str == null) {
+        std.log.err("Missing fps", .{});
+        return ErrorCli.WrongArgument;
+    }
+    const fps = try std.fmt.parseInt(u32, fps_str.?, 10);
+    if (fps == 0) {
+        std.log.err("Invalid fps", .{});
+        return ErrorCli.WrongArgument;
+    }
+
+    const total_frames_str = args.next();
+    if (total_frames_str == null) {
+        std.log.err("Missing total_frames", .{});
+        return ErrorCli.WrongArgument;
+    }
+    const total_frames = try std.fmt.parseInt(u32, total_frames_str.?, 10);
+    if (total_frames == 0) {
+        std.log.err("Invalid total_frames", .{});
+        return ErrorCli.WrongArgument;
+    }
+
     return Params{
-        .filename = filename.?,
         .width = width,
         .height = height,
         .variant = variant,
+        .mode = .{ .video = .{ .fps = fps, .total_frames = total_frames } },
     };
 }

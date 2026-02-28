@@ -115,15 +115,12 @@ const ProcessingFunctor = struct {
 
 /// Generate an image of given width and height using domain warping and fbm noise
 /// The code is a bit long and hard to read mainly because it use simd operations to speed up processing
-pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32) !std.ArrayList(u8) {
+pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
-    // Variable to simulate time and allow to select a different variation of the pattern
-    const time = 125.0;
-
     const scale = laz.toV(1000.0);
-    const sin_time = laz.toV(std.math.sin(time));
+    const sin_time: laz.InnerType = @splat(@sin(time));
 
     const context = ProcessingFunctor{
         .scale = scale,
