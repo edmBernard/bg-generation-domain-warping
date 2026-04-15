@@ -7,7 +7,7 @@
 const zpp = @import("zpp");
 const working_type = @import("working_type.zig");
 const f32v = working_type.f32v;
-const laf = zpp.zla.with(f32v);
+const laf = zpp.zla.With(f32v);
 const periodic = @import("periodic.zig");
 const hash = @import("hash.zig");
 

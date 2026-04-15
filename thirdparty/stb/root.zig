@@ -1,7 +1,4 @@
-const stb_image_write = @cImport({
-    @cDefine("STB_IMAGE_WRITE_IMPLEMENTATION", "1");
-    @cInclude("stb_image_write.h");
-});
+const stb = @import("stb_c");
 
 const Error = error{
     FailedToSaveInFile,
@@ -16,7 +13,7 @@ pub fn image_write(
     const number_component = 3; // RGB
     const quality = 95;
 
-    const result = stb_image_write.stbi_write_jpg(
+    const result = stb.stbi_write_jpg(
         filename.ptr,
         @intCast(width),
         @intCast(height),

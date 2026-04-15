@@ -4,6 +4,7 @@
 /.vscode
 
 /zig-out
+/zig-pkg
 .zig-cache
 
 *.jpeg

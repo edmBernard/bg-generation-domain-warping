@@ -9,7 +9,7 @@ const color = @import("color.zig");
 const working_type = @import("working_type.zig");
 const u8v = working_type.u8v;
 const f32v = working_type.f32v;
-const laf = zpp.zla.with(f32v);
+const laf = zpp.zla.With(f32v);
 
 // 3D rotation matrix for FBM octave decorrelation
 // Compose Rz(pi/4) and Rx(pi/6)
@@ -107,9 +107,9 @@ const ProcessingFunctor = struct {
         const zero: f32v = @splat(0.0);
         const max8u: f32v = @splat(255.0);
         return .{
-            @intFromFloat(@max(zero, @min(max8u, col.x * max8u))),
-            @intFromFloat(@max(zero, @min(max8u, col.y * max8u))),
-            @intFromFloat(@max(zero, @min(max8u, col.z * max8u))),
+            @trunc(@max(zero, @min(max8u, col.x * max8u))),
+            @trunc(@max(zero, @min(max8u, col.y * max8u))),
+            @trunc(@max(zero, @min(max8u, col.z * max8u))),
         };
     }
 };
@@ -128,7 +128,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
     };
 
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
-    const destination = zpp.makeInterleavedDest(u8, 3, data.items, width, region);
+    const destination = try zpp.makeInterleavedDest(u8, 3, data.items, width, region);
     const generator = zpp.generate(f32v, context, ProcessingFunctor.process);
     zpp.process(generator, destination);
 

@@ -8,7 +8,7 @@ const color = @import("color.zig");
 const working_type = @import("working_type.zig");
 const u8v = working_type.u8v;
 const f32v = working_type.f32v;
-const laf = zpp.zla.with(f32v);
+const laf = zpp.zla.With(f32v);
 
 // rotation matrix to avoid direction artifacts
 const angle = std.math.pi / 4.0;
@@ -89,9 +89,9 @@ const ProcessingFunctor = struct {
         const splat_0: f32v = @splat(0.0);
         const splat_255: f32v = @splat(255.0);
         return .{
-            @intFromFloat(@max(splat_0, @min(splat_255, col.x * splat_255))),
-            @intFromFloat(@max(splat_0, @min(splat_255, col.y * splat_255))),
-            @intFromFloat(@max(splat_0, @min(splat_255, col.z * splat_255))),
+            @trunc(@max(splat_0, @min(splat_255, col.x * splat_255))),
+            @trunc(@max(splat_0, @min(splat_255, col.y * splat_255))),
+            @trunc(@max(splat_0, @min(splat_255, col.z * splat_255))),
         };
     }
 };
@@ -111,7 +111,7 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
     };
 
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
-    const destination = zpp.makeInterleavedDest(u8, 3, data.items, width, region);
+    const destination = try zpp.makeInterleavedDest(u8, 3, data.items, width, region);
     const generator = zpp.generate(laf.InnerType, context, ProcessingFunctor.process);
     zpp.process(generator, destination);
 

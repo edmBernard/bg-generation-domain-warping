@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const stb_wrapper = @import("thirdparty/stb/build.zig").build(b);
+    const stb_wrapper = @import("thirdparty/stb/build.zig").build(b, target, optimize);
 
     const zpp_dep = b.dependency("zpp", .{
         .target = target,

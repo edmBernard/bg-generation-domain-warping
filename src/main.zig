@@ -20,19 +20,19 @@ fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: 
         5 => try variant5.generate_image(allocator, width, height, time),
         6 => try variant6.generate_image(allocator, width, height, time),
         7 => try variant7.generate_image(allocator, width, height, time),
-        else => |_| {
+        else => {
             std.log.err("Unsupported variant: {d}", .{variant});
             return error.UnsupportedVariant;
         },
     };
 }
 
-fn generate_single_image(allocator: std.mem.Allocator, args: cli.Params, filename: []const u8) !void {
-    const tic = std.time.microTimestamp();
+fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, filename: []const u8) !void {
+    const tic = std.Io.Timestamp.now(io, .awake);
     var data = try call_variant(allocator, args.variant, args.width, args.height, 125.0);
     defer data.deinit(allocator);
-    const tac: i64 = std.time.microTimestamp() - tic;
-    std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(tac)) / 1_000_000});
+    const elapsed = tic.durationTo(std.Io.Timestamp.now(io, .awake));
+    std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(elapsed.toMicroseconds())) / 1_000_000});
 
     // save to file
     var buffer_for_filename: [256]u8 = undefined;
@@ -44,8 +44,8 @@ fn generate_single_image(allocator: std.mem.Allocator, args: cli.Params, filenam
     std.log.info("Image written successfully to : {s}.", .{full_filename});
 }
 
-fn generate_video(allocator: std.mem.Allocator, args: cli.Params, fps: u32, total_frames: u32) !void {
-    const stdout = std.fs.File.stdout();
+fn generate_video(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, fps: u32, total_frames: u32) !void {
+    const stdout = std.Io.File.stdout();
     const frame_size = @as(usize, args.width) * @as(usize, args.height) * 3;
     const time_step: f32 = 1.0 / @as(f32, @floatFromInt(fps));
 
@@ -53,7 +53,7 @@ fn generate_video(allocator: std.mem.Allocator, args: cli.Params, fps: u32, tota
         args.width, args.height, args.variant, fps, total_frames,
     });
 
-    const tic = std.time.microTimestamp();
+    const tic = std.Io.Timestamp.now(io, .awake);
 
     for (0..total_frames) |frame_idx| {
         const time: f32 = @as(f32, @floatFromInt(frame_idx)) * time_step;
@@ -61,28 +61,29 @@ fn generate_video(allocator: std.mem.Allocator, args: cli.Params, fps: u32, tota
         var data = try call_variant(allocator, args.variant, args.width, args.height, time);
         defer data.deinit(allocator);
 
-        try stdout.writeAll(data.items[0..frame_size]);
+        try stdout.writeStreamingAll(io, data.items[0..frame_size]);
 
         if (frame_idx % 10 == 0) {
             std.log.info("Frame {d}/{d}", .{ frame_idx, total_frames });
         }
     }
 
-    const tac: i64 = std.time.microTimestamp() - tic;
-    std.log.info("Video generated in {d:>20.2} s", .{@as(f32, @floatFromInt(tac)) / 1_000_000});
+    const elapsed = tic.durationTo(std.Io.Timestamp.now(io, .awake));
+    std.log.info("Video generated in {d:>20.2} s", .{@as(f32, @floatFromInt(elapsed.toMicroseconds())) / 1_000_000});
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
     // parse command line arguments
-    const args = try cli.parse_args(allocator);
+    var arg_it = init.minimal.args.iterate();
+    const args = try cli.parse_args(&arg_it);
 
     switch (args.mode) {
-        .image => |img| try generate_single_image(allocator, args, img.filename),
-        .video => |vid| try generate_video(allocator, args, vid.fps, vid.total_frames),
+        .image => |img| try generate_single_image(allocator, init.io, args, img.filename),
+        .video => |vid| try generate_video(allocator, init.io, args, vid.fps, vid.total_frames),
     }
 }
 

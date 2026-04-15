@@ -25,7 +25,7 @@
     .fingerprint = 0x5c0d24a6ac39ae98, // Changing this has security and trust implications.
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     // This field is optional.
     // Each dependency must either provide a `url` and `hash`, or a `path`.
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
@@ -33,8 +33,8 @@
     // internet connectivity.
     .dependencies = .{
         .zpp = .{
-            .url = "git+https://github.com/edmbernard/zpp#eac0c53361db8374f2d304062d0bed73bb346aae",
-            .hash = "zpp-0.0.4-PqwECXt2AgBp3UqDyzmCm8OnU6dm_VcZDsBv7WtUPYYk",
+            .url = "git+https://github.com/edmbernard/zpp#c63fb10fe499887e95ba1caf6bbecb43868f273c",
+            .hash = "zpp-0.0.5-PqwECXG5AgDQwLzDQZVoWGwFfXJ52SQ7hnpMPncc4ydK",
         },
     },
     .paths = .{

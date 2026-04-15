@@ -7,7 +7,7 @@ const std = @import("std");
 const zpp = @import("zpp");
 const working_type = @import("working_type.zig");
 const f32v = working_type.f32v;
-const laf = zpp.zla.with(f32v);
+const laf = zpp.zla.With(f32v);
 const periodic = @import("periodic.zig");
 
 /// Hash a 2D lattice point to a pseudo-random gradient vector in [-1, 1]^2.

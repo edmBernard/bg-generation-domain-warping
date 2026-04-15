@@ -7,7 +7,7 @@ const std = @import("std");
 const zpp = @import("zpp");
 const working_type = @import("working_type.zig");
 const f32v = working_type.f32v;
-const laf = zpp.zla.with(f32v);
+const laf = zpp.zla.With(f32v);
 
 /// A periodic triangle function with period 4 and range [-1, 1].
 /// Using this instead of sin improves performance by a factor of 5 on the whole generation
