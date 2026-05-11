@@ -52,7 +52,7 @@ pub fn parse_args(args: *std.process.Args.Iterator) !Params {
         return ErrorCli.WrongArgument;
     };
     const variant = try std.fmt.parseInt(u32, variant_str, 10);
-    if (variant == 0 or variant > 7) {
+    if (variant == 0 or variant > 9) {
         std.log.err("Invalid variant version", .{});
         return ErrorCli.WrongArgument;
     }

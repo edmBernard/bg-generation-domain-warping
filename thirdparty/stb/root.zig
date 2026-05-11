@@ -5,7 +5,7 @@ const Error = error{
 };
 
 pub fn image_write(
-    filename: []const u8,
+    filename: [:0]const u8,
     data: []const u8,
     width: u32,
     height: u32,
