@@ -10,36 +10,6 @@ const u8v = working_type.u8v;
 const f32v = working_type.f32v;
 const laf = zpp.zla.With(f32v);
 
-// rotation matrix to avoid direction artifacts
-const angle = std.math.pi / 4.0;
-const mtx = laf.Mat2x2{
-    .data = [4]f32v{
-        @splat(@cos(angle)),
-        @splat(@sin(angle)),
-        @splat(-@sin(angle)),
-        @splat(@cos(angle)),
-    },
-};
-
-/// fractional Brownian motion (fBm), also called a fractal Brownian motion
-/// https://en.wikipedia.org/wiki/Fractional_Brownian_motion
-fn fbm(comptime octaves: i32, vec: laf.Vec2) f32v {
-    // H (Hurst exponent) determines the self similarity it recommand to use 0.5
-    const H = 0.5; // change a lot the visual aspect
-    const G = laf.splat(std.math.exp2(-H));
-    var f = laf.splat(1.0);
-    var a = laf.splat(0.5);
-    var t = laf.splat(0.0);
-    var p = vec;
-    inline for (0..octaves) |_| {
-        p = mtx.mulvec(p);
-        t += a * simplex.noise(p.sub1(@splat(1.0)).mul1(f));
-        f *= laf.splat(1.9);
-        a *= G;
-    }
-    return t;
-}
-
 // 3D rotation matrix for FBM octave decorrelation
 // Compose Rz(pi/4) and Rx(pi/7)
 const cos_z = @cos(std.math.pi / 4.0);
@@ -81,6 +51,7 @@ fn fbm3d(comptime octaves: i32, vec: laf.Vec3) f32v {
 }
 
 fn pattern(p: laf.Vec3) laf.InnerType {
+    // We compute one fbm per axis to avoid directional artifacts.
     // low frequency
     const q: laf.Vec2 = .{
         .x = fbm3d(14, .{
@@ -135,19 +106,9 @@ const ProcessingFunctor = struct {
 
         // Compute color of the pattern
         // We basically mix several colors depending on the pattern values
-        // const gray = color.hexToVec3(0x808080ff); // #808080ff
         const white = color.hexToVec3(0xffffffff); // #ffffffff
         const dark_blue = color.hexToVec3(0x00193cff); // #00193cff
-        // const dark_orange = color.hexToVec3(0x734023ff); // #734023ff
-        // var col = white.mul1(value).add(dark_blue).mul1(laf.splat(std.math.pi * 2));
         const col = white.mul1(value).add(dark_blue);
-        // col = .{
-        //     .x = @cos(col.x),
-        //     .y = @cos(col.y),
-        //     .z = @cos(col.z),
-        // };
-        // col = col.mul(dark_orange).add(gray);
-        // col = col.pow(3);
 
         // Convert from [0, 1] float to [0, 255] u8
         const splat_0: f32v = @splat(0.0);

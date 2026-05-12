@@ -72,19 +72,9 @@ const ProcessingFunctor = struct {
 
         // Compute color of the pattern
         // We basically mix several colors depending on the pattern values
-        // const gray = color.hexToVec3(0x808080ff); // #808080ff
         const white = color.hexToVec3(0xffffffff); // #ffffffff
         const dark_blue = color.hexToVec3(0x00193cff); // #00193cff
-        // const dark_orange = color.hexToVec3(0x734023ff); // #734023ff
-        // var col = white.mul1(value).add(dark_blue).mul1(laf.splat(std.math.pi * 2));
         const col = white.mul1(value).add(dark_blue);
-        // col = .{
-        //     .x = @cos(col.x),
-        //     .y = @cos(col.y),
-        //     .z = @cos(col.z),
-        // };
-        // col = col.mul(dark_orange).add(gray);
-        // col = col.pow(3);
 
         // Convert from [0, 1] float to [0, 255] u8
         const splat_0: f32v = @splat(0.0);
