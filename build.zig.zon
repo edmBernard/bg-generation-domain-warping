@@ -33,8 +33,8 @@
     // internet connectivity.
     .dependencies = .{
         .zpp = .{
-            .url = "git+https://github.com/edmbernard/zpp#d875fecb3afb3f264d31982bd13ec86f6cf27bb7",
-            .hash = "zpp-0.0.5-PqwECVv3AgBfCz6ZYv08w11En2Geo447MnxyMJH2lVbv",
+            .url = "git+https://github.com/edmbernard/zpp#a56a6a7f1d2c3f8babc45c0d28cfa9361118269e",
+            .hash = "zpp-0.0.5-PqwECbn6AgA60IwHou7iPmSpFNNeZN6FLikyKCCVSfTi",
         },
     },
     .paths = .{

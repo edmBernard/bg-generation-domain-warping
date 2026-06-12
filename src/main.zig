@@ -13,7 +13,7 @@ const variant8 = @import("variant8.zig");
 const variant9 = @import("variant9.zig");
 const cli = @import("cli.zig");
 
-fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
+fn call_variant(allocator: std.mem.Allocator, io: std.Io, variant: u32, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
     return switch (variant) {
         1 => try variant1.generate_image(allocator, width, height, time),
         2 => try variant2.generate_image(allocator, width, height, time),
@@ -23,7 +23,7 @@ fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: 
         6 => try variant6.generate_image(allocator, width, height, time),
         7 => try variant7.generate_image(allocator, width, height, time),
         8 => try variant8.generate_image(allocator, width, height, time),
-        9 => try variant9.generate_image(allocator, width, height, time),
+        9 => try variant9.generate_image(allocator, io, width, height, time),
         else => {
             std.log.err("Unsupported variant: {d}", .{variant});
             return error.UnsupportedVariant;
@@ -33,7 +33,7 @@ fn call_variant(allocator: std.mem.Allocator, variant: u32, width: u32, height: 
 
 fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, filename: []const u8) !void {
     const tic = std.Io.Timestamp.now(io, .awake);
-    var data = try call_variant(allocator, args.variant, args.width, args.height, 125.0);
+    var data = try call_variant(allocator, io, args.variant, args.width, args.height, 125.0);
     defer data.deinit(allocator);
     const elapsed = tic.durationTo(std.Io.Timestamp.now(io, .awake));
     std.log.info("Image generated in {d:>20.2} s : ", .{@as(f32, @floatFromInt(elapsed.toMicroseconds())) / 1_000_000});
@@ -62,7 +62,7 @@ fn generate_video(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, fp
     for (0..total_frames) |frame_idx| {
         const time: f32 = @as(f32, @floatFromInt(frame_idx)) * time_step;
 
-        var data = try call_variant(allocator, args.variant, args.width, args.height, time);
+        var data = try call_variant(allocator, io, args.variant, args.width, args.height, time);
         defer data.deinit(allocator);
 
         try stdout.writeStreamingAll(io, data.items[0..frame_size]);
@@ -107,4 +107,6 @@ test {
     _ = variant5;
     _ = variant6;
     _ = variant7;
+    _ = variant8;
+    _ = variant9;
 }

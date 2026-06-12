@@ -121,9 +121,21 @@ const ProcessingFunctor = struct {
     }
 };
 
+/// Process one horizontal band of the image.
+/// Each band writes to a disjoint row range of the shared buffer, so bands can
+/// run concurrently without synchronization.
+fn generate_band(context: ProcessingFunctor, data: []u8, width: u32, band: zpp.Region) void {
+    // The full-image layout was validated in generate_image and the band is a
+    // subset of it, so destination creation cannot fail here.
+    const destination = zpp.makeInterleavedDest(u8, 3, data, width, band) catch unreachable;
+    const generator = zpp.generate(laf.InnerType, context, ProcessingFunctor.process);
+    zpp.process(generator, destination);
+}
+
 /// Generate an image of given width and height using domain warping and fbm noise
 /// The code is a bit long and hard to read mainly because it use simd operations to speed up processing
-pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
+/// The image is split in horizontal bands processed in parallel through `io`.
+pub fn generate_image(allocator: std.mem.Allocator, io: std.Io, width: u32, height: u32, time: f32) !std.ArrayList(u8) {
     var data: std.ArrayList(u8) = .empty;
     try data.appendNTimes(allocator, 0, width * height * 3);
 
@@ -135,10 +147,26 @@ pub fn generate_image(allocator: std.mem.Allocator, width: u32, height: u32, tim
         .time = time_splat,
     };
 
+    // Validate the full-image layout once so per-band destinations cannot fail.
     const region = zpp.Region{ .x = 0, .y = 0, .width = width, .height = height };
-    const destination = try zpp.makeInterleavedDest(u8, 3, data.items, width, region);
-    const generator = zpp.generate(laf.InnerType, context, ProcessingFunctor.process);
-    zpp.process(generator, destination);
+    _ = try zpp.makeInterleavedDest(u8, 3, data.items, width, region);
+
+    // Small bands (several per core) let the thread pool balance the load.
+    const band_height: u32 = 64;
+    var group: std.Io.Group = .init;
+    defer group.cancel(io);
+
+    var y: u32 = 0;
+    while (y < height) : (y += band_height) {
+        const band = zpp.Region{
+            .x = 0,
+            .y = @intCast(y),
+            .width = width,
+            .height = @min(band_height, height - y),
+        };
+        group.async(io, generate_band, .{ context, data.items, width, band });
+    }
+    try group.await(io);
 
     return data;
 }
