@@ -31,7 +31,7 @@ fn call_variant(allocator: std.mem.Allocator, io: std.Io, variant: u32, width: u
     };
 }
 
-fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, filename: []const u8) !void {
+fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.ImageArgs) !void {
     const tic = std.Io.Timestamp.now(io, .awake);
     var data = try call_variant(allocator, io, args.variant, args.width, args.height, 125.0);
     defer data.deinit(allocator);
@@ -41,14 +41,16 @@ fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.Par
     // save to file
     var buffer_for_filename: [256]u8 = undefined;
     // filename need to be zero terminated for stb_image_write
-    const full_filename = try std.mem.printSentinel(&buffer_for_filename, "{s}.jpeg", .{filename}, 0);
+    const full_filename = try std.mem.printSentinel(&buffer_for_filename, "{s}.jpeg", .{args.filename}, 0);
     std.debug.print("Writing image to file: {s}\n", .{full_filename});
     try stb_wrapper.image_write(full_filename, data.items, args.width, args.height);
 
     std.log.info("Image written successfully to : {s}.", .{full_filename});
 }
 
-fn generate_video(allocator: std.mem.Allocator, io: std.Io, args: cli.Params, fps: u32, total_frames: u32) !void {
+fn generate_video(allocator: std.mem.Allocator, io: std.Io, args: cli.VideoArgs) !void {
+    const fps = args.fps;
+    const total_frames = args.total_frames;
     const stdout = std.Io.File.stdout();
     const frame_size = @as(usize, args.width) * @as(usize, args.height) * 3;
     const time_step: f32 = 1.0 / @as(f32, @floatFromInt(fps));
@@ -82,12 +84,15 @@ pub fn main(init: std.process.Init) !void {
     const allocator = arena.allocator();
 
     // parse command line arguments
-    var arg_it = init.minimal.args.iterate();
-    const args = try cli.parse_args(&arg_it);
+    const command = cli.parse_args(init) catch |err| switch (err) {
+        error.HelpRequested => return,
+        error.WrongArgument => std.process.exit(2),
+        else => return err,
+    };
 
-    switch (args.mode) {
-        .image => |img| try generate_single_image(allocator, init.io, args, img.filename),
-        .video => |vid| try generate_video(allocator, init.io, args, vid.fps, vid.total_frames),
+    switch (command) {
+        .image => |img| try generate_single_image(allocator, init.io, img),
+        .video => |vid| try generate_video(allocator, init.io, vid),
     }
 }
 

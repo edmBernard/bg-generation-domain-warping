@@ -19,6 +19,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const zyra_dep = b.dependency("zyra", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exe = b.addExecutable(.{
         .name = "bg_generation",
         .root_module = b.createModule(.{
@@ -27,6 +32,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "zpp", .module = zpp_dep.module("zpp") },
+                .{ .name = "zyra", .module = zyra_dep.module("zyra") },
                 .{ .name = "stb_wrapper", .module = stb_wrapper },
             },
         }),
