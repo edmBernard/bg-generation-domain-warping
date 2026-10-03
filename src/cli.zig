@@ -1,6 +1,14 @@
 const std = @import("std");
 const zyra = @import("zyra");
 
+fn nonZero(value: u32) ?[]const u8 {
+    return if (value == 0) "must be greater than 0" else null;
+}
+
+fn checkVariantRange(value: u32) ?[]const u8 {
+    return if (value < 1 or value > 9) "must be between 1 and 9" else null;
+}
+
 pub const ImageArgs = struct {
     filename: []const u8,
     width: u32,
@@ -10,9 +18,9 @@ pub const ImageArgs = struct {
     pub const zyra = .{
         .fields = .{
             .filename = .{ .help = "Output filename without extension (written as .jpeg)" },
-            .width = .{ .help = "Image width in pixels" },
-            .height = .{ .help = "Image height in pixels" },
-            .variant = .{ .help = "Variant to generate (1-9)" },
+            .width = .{ .help = "Image width in pixels", .validate = nonZero },
+            .height = .{ .help = "Image height in pixels", .validate = nonZero },
+            .variant = .{ .help = "Variant to generate (1-9)", .validate = checkVariantRange },
         },
     };
 };
@@ -26,11 +34,11 @@ pub const VideoArgs = struct {
 
     pub const zyra = .{
         .fields = .{
-            .width = .{ .help = "Frame width in pixels" },
-            .height = .{ .help = "Frame height in pixels" },
-            .variant = .{ .help = "Variant to generate (1-9)" },
-            .fps = .{ .help = "Frames per second" },
-            .total_frames = .{ .help = "Number of frames to generate" },
+            .width = .{ .help = "Frame width in pixels", .validate = nonZero },
+            .height = .{ .help = "Frame height in pixels", .validate = nonZero },
+            .variant = .{ .help = "Variant to generate (1-9)", .validate = checkVariantRange },
+            .fps = .{ .help = "Frames per second", .validate = nonZero },
+            .total_frames = .{ .help = "Number of frames to generate", .validate = nonZero },
         },
     };
 };
@@ -84,40 +92,7 @@ pub fn parse_args(init: std.process.Init) !Command {
         },
     };
 
-    try validate(command);
     return command;
-}
-
-fn validate(command: Command) ErrorCli!void {
-    switch (command) {
-        inline else => |args| {
-            if (args.width == 0) {
-                std.log.err("Invalid width", .{});
-                return ErrorCli.WrongArgument;
-            }
-            if (args.height == 0) {
-                std.log.err("Invalid height", .{});
-                return ErrorCli.WrongArgument;
-            }
-            if (args.variant == 0 or args.variant > 9) {
-                std.log.err("Invalid variant version", .{});
-                return ErrorCli.WrongArgument;
-            }
-        },
-    }
-    switch (command) {
-        .image => {},
-        .video => |vid| {
-            if (vid.fps == 0) {
-                std.log.err("Invalid fps", .{});
-                return ErrorCli.WrongArgument;
-            }
-            if (vid.total_frames == 0) {
-                std.log.err("Invalid total_frames", .{});
-                return ErrorCli.WrongArgument;
-            }
-        },
-    }
 }
 
 test "parse image command" {
@@ -126,7 +101,6 @@ test "parse image command" {
     try std.testing.expectEqual(@as(u32, 1920), command.image.width);
     try std.testing.expectEqual(@as(u32, 1080), command.image.height);
     try std.testing.expectEqual(@as(u32, 3), command.image.variant);
-    try validate(command);
 }
 
 test "parse video command with named arguments" {
@@ -136,13 +110,15 @@ test "parse video command with named arguments" {
     try std.testing.expectEqual(@as(u32, 9), command.video.variant);
     try std.testing.expectEqual(@as(u32, 30), command.video.fps);
     try std.testing.expectEqual(@as(u32, 300), command.video.total_frames);
-    try validate(command);
 }
 
 test "reject invalid values" {
     try std.testing.expectError(error.MissingRequired, zyra.parse(Command, &.{ "bg_generation", "image", "out", "1920" }, .{}));
-    const zero_width = try zyra.parse(Command, &.{ "bg_generation", "image", "out", "0", "1080", "3" }, .{});
-    try std.testing.expectError(ErrorCli.WrongArgument, validate(zero_width));
-    const bad_variant = try zyra.parse(Command, &.{ "bg_generation", "video", "640", "480", "10", "30", "300" }, .{});
-    try std.testing.expectError(ErrorCli.WrongArgument, validate(bad_variant));
+    try std.testing.expectError(error.InvalidValue, zyra.parse(Command, &.{ "bg_generation", "image", "out", "0", "1080", "3" }, .{}));
+    try std.testing.expectError(error.InvalidValue, zyra.parse(Command, &.{ "bg_generation", "video", "640", "480", "10", "30", "300" }, .{}));
+    try std.testing.expectError(error.InvalidValue, zyra.parse(Command, &.{ "bg_generation", "video", "--fps", "0", "640", "480", "9", "300" }, .{}));
+
+    var diagnostic: zyra.Diagnostic = undefined;
+    try std.testing.expectError(error.InvalidValue, zyra.parse(Command, &.{ "bg_generation", "image", "out", "1920", "1080", "10" }, .{ .diagnostic = &diagnostic }));
+    try std.testing.expectEqualStrings("must be between 1 and 9", diagnostic.reason.?);
 }
