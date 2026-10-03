@@ -1260,7 +1260,7 @@ static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitC
       if(c == 255) {
          stbiw__putc(s, 0);
       }
-      bitBuf <<= 8;
+      bitBuf = (bitBuf & 0xFFFF) << 8; // EBE: fix UBSan issue
       bitCnt -= 8;
    }
    *bitBufP = bitBuf;

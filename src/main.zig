@@ -41,7 +41,7 @@ fn generate_single_image(allocator: std.mem.Allocator, io: std.Io, args: cli.Par
     // save to file
     var buffer_for_filename: [256]u8 = undefined;
     // filename need to be zero terminated for stb_image_write
-    const full_filename = try std.fmt.bufPrintZ(&buffer_for_filename, "{s}.jpeg", .{filename});
+    const full_filename = try std.mem.printSentinel(&buffer_for_filename, "{s}.jpeg", .{filename}, 0);
     std.debug.print("Writing image to file: {s}\n", .{full_filename});
     try stb_wrapper.image_write(full_filename, data.items, args.width, args.height);
 
